@@ -55,6 +55,9 @@ class TaskConfig(BaseModel):
     cleanups: List[TaskCleanupConfig] = Field(default_factory=list, description="Cleanup configurations")
     use_specified_server: bool = (
         Field(default=False, description="Whether to let agent only use the servers specified in this config"))
+    attack_category: Optional[str] = Field(default=None, description="Type of attack for this task")
+    mcp_server_modifications: List[dict] = Field(default_factory=list, description="MCP server tool modifications for attacks")
+    mcp_server_additions: Optional[dict] = Field(default=None, description="MCP server additions for attack testing")
 
     def set_environ_variables(self, context: Optional[Context] = None):
         """Set environment variables specified in `question`."""
@@ -81,6 +84,13 @@ class Task(metaclass=AutodocABCMeta):
             config = from_json(config)
         self._config = TaskConfig.model_validate(config)
         self._context = context if context else Context()
+        
+        # 将attack_category添加到context的metadata中
+        if self._config.attack_category:
+            if not hasattr(self._context, 'metadata'):
+                self._context.metadata = {}
+            self._context.metadata["attack_category"] = self._config.attack_category
+        
         self._config.set_environ_variables(context=self._context)
         self._evaluators = [Evaluator(c, context=self._context) for c in self._config.evaluators]
         self._logger = get_logger("Task")
@@ -113,6 +123,26 @@ class Task(metaclass=AutodocABCMeta):
         Check if only allow agents to use the task specified servers.
         """
         return self._config.use_specified_server
+    
+    def has_attack(self) -> bool:
+        """
+        Check if this task contains attack configuration.
+        """
+        return (self._config.attack_category is not None and 
+                (len(self._config.mcp_server_modifications) > 0 or 
+                 (hasattr(self._config, 'mcp_server_additions') and self._config.mcp_server_additions is not None)))
+    
+    def get_mcp_server_modifications(self) -> List[dict]:
+        """
+        Get MCP server modifications for this task.
+        """
+        return self._config.mcp_server_modifications
+    
+    def get_mcp_server_additions(self) -> Optional[dict]:
+        """
+        Get MCP server additions for this task.
+        """
+        return self._config.mcp_server_additions
 
     async def evaluate(self, x: str | Dict) -> List[EvaluationResult]:
         """
@@ -226,4 +256,71 @@ class Task(metaclass=AutodocABCMeta):
         return input_arg
 
     async def cleanup(self):
-        """Cleanup resources."""
+        """Clean up resources and restore original server files."""
+        # Restore original server.py file if it was modified
+        if hasattr(self, '_server_backup_path') and hasattr(self, '_original_server_path'):
+            try:
+                import shutil
+                import os
+                backup_path = self._server_backup_path
+                original_path = self._original_server_path
+                
+                if os.path.exists(backup_path) and os.path.exists(original_path):
+                    # Restore original server.py from backup
+                    shutil.copy2(backup_path, original_path)
+                    self._logger.info(f"Restored original server.py from backup: {backup_path}")
+                    
+                    # Remove backup file
+                    os.remove(backup_path)
+                    self._logger.info(f"Removed backup file: {backup_path}")
+                    
+                    # Clean up attributes
+                    delattr(self, '_server_backup_path')
+                    delattr(self, '_original_server_path')
+                    
+                    # Reconnect to the restored server using change_servers
+                    if hasattr(self, '_agent') and hasattr(self._agent, 'change_servers'):
+                        try:
+                            # Get current server configurations
+                            mcp_manager = getattr(self._agent, '_mcp_manager', None)
+                            if mcp_manager:
+                                current_servers = []
+                                for server_name in self._agent._tools.keys():
+                                    server_config = mcp_manager.get_config(server_name)
+                                    server_info = {
+                                        "name": server_name,
+                                        "transport": "stdio"
+                                    }
+                                    current_servers.append(server_info)
+                                
+                                # Reconnect using change_servers
+                                await self._agent.change_servers(current_servers)
+                                self._logger.info("Successfully reconnected to restored server using change_servers")
+                        except Exception as e:
+                            self._logger.warning(f"Failed to reconnect to restored server: {e}")
+                else:
+                    self._logger.warning("Backup or original server file not found for restoration")
+            except Exception as e:
+                self._logger.error(f"Failed to restore original server.py: {e}")
+        
+        # Clean up malicious tool injector if it exists (legacy cleanup)
+        if hasattr(self, '_malicious_injector'):
+            try:
+                self._malicious_injector.cleanup()
+                self._logger.info("Cleaned up malicious tool injector")
+            except Exception as e:
+                self._logger.warning(f"Failed to cleanup malicious tool injector: {e}")
+            finally:
+                delattr(self, '_malicious_injector')
+        
+        # Clean up temporary server directory if it exists (legacy cleanup)
+        if hasattr(self, '_temp_server_dir'):
+            try:
+                import shutil
+                import os
+                if os.path.exists(self._temp_server_dir):
+                    shutil.rmtree(self._temp_server_dir)
+                    self._logger.info(f"Cleaned up temporary server directory: {self._temp_server_dir}")
+                delattr(self, '_temp_server_dir')
+            except Exception as e:
+                self._logger.warning(f"Failed to cleanup temporary server directory: {e}")

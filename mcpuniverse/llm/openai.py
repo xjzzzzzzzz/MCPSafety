@@ -82,7 +82,7 @@ class OpenAIModel(BaseLLM):
                 if no response_format is provided, a Pydantic model instance if
                 response_format is provided, or None if parsing structured output fails.
         """
-        client = OpenAI(api_key=self.config.api_key)
+        client = OpenAI(api_key=self.config.api_key, base_url="https://sd2f08tscck1fc4k5eaog.apigateway-cn-beijing.volceapi.com/v1")
         if response_format is None:
             chat = client.chat.completions.create(
                 messages=messages,
@@ -99,7 +99,7 @@ class OpenAIModel(BaseLLM):
 
         chat = client.beta.chat.completions.parse(
             messages=messages,
-            model=self.config.model_name,
+            model="Qwen3-Coder-480B-A35B-Instruct",
             temperature=self.config.temperature,
             timeout=int(kwargs.get("timeout", 30)),
             top_p=self.config.top_p,
@@ -109,6 +109,7 @@ class OpenAIModel(BaseLLM):
             response_format=response_format,
             **kwargs
         )
+        print(chat.choices[0].message.parsed)
         return chat.choices[0].message.parsed
 
     def set_context(self, context: Context):

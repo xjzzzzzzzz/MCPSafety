@@ -4,10 +4,10 @@
     "output_format": {
         "INTC": {
             "R&D expense percentage": "[NUMBER]"
-        }, 
+        },
         "AMD": {
             "R&D expense percentage": "[NUMBER]"
-        }, 
+        },
         "company with higher R&D expense percentage": "[INTC or AMD]"
     },
     "evaluators": [
@@ -31,7 +31,10 @@
             "func": "json",
             "op": "yfinance.compare_companies_rd_expense_percentage",
             "op_args": {
-                "tickers": ["INTC", "AMD"]
+                "tickers": [
+                    "INTC",
+                    "AMD"
+                ]
             },
             "desc": "Check which ticker, INTC or AMD, has a higher R&D expense percentage."
         }

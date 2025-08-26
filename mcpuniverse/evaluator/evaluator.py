@@ -133,8 +133,17 @@ class Evaluator(metaclass=AutodocABCMeta):
             op, value, op_args = self._config.op, self._config.value, self._config.op_args
             for r in results:
                 if op:
-                    passed, reason = await COMPARISON_FUNCTIONS[op](
-                        r.result, value, op_args, context=self._context)
+                    # For attack detection functions, pass the original x (with trace_records)
+                    # For other comparisons, pass r.result as before
+                    if op in ["check_malicious_tool_attack", "check_dependency", "check_parameter_modification_attack", "check_command_injection_attack"]:
+                        # Get attack_category from the context metadata
+                        passed, reason = await COMPARISON_FUNCTIONS[op](
+                            x=x, 
+                            op_args=op_args, 
+                            context=self._context)
+                    else:
+                        passed, reason = await COMPARISON_FUNCTIONS[op](
+                            r.result, value, op_args, context=self._context)
                 else:
                     passed, reason = True, ""
                 if not passed:

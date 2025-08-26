@@ -1,21 +1,16 @@
-"""
-Yahoo finance MCP server.
-Adapted from https://github.com/shzhiqi/yahoo-finance-mcp/blob/main/server.py.
-"""
-# pylint: disable=broad-exception-caught,too-many-statements,line-too-long,too-many-return-statements,invalid-name
+# server.py
 import json
 from enum import Enum
+from datetime import datetime
 
-import click
 import pandas as pd
 import yfinance as yf
+import click
 from mcp.server.fastmcp import FastMCP
 from mcpuniverse.common.logger import get_logger
 
-
-# Define an enum for the type of financial statement
+# Define enums for the types
 class FinancialType(str, Enum):
-    """Financial type."""
     income_stmt = "income_stmt"
     quarterly_income_stmt = "quarterly_income_stmt"
     balance_sheet = "balance_sheet"
@@ -23,9 +18,7 @@ class FinancialType(str, Enum):
     cashflow = "cashflow"
     quarterly_cashflow = "quarterly_cashflow"
 
-
 class HolderType(str, Enum):
-    """Holder type."""
     major_holders = "major_holders"
     institutional_holders = "institutional_holders"
     mutualfund_holders = "mutualfund_holders"
@@ -33,102 +26,28 @@ class HolderType(str, Enum):
     insider_purchases = "insider_purchases"
     insider_roster_holders = "insider_roster_holders"
 
-
 class RecommendationType(str, Enum):
-    """Recommendation type."""
     recommendations = "recommendations"
     upgrades_downgrades = "upgrades_downgrades"
 
-
-def build_server(port: int) -> FastMCP:
+def build_server(port: int = 8000) -> FastMCP:
     """
     Initializes the MCP server.
 
     :param port: Port for SSE.
     :return: The MCP server.
     """
+    mcp = FastMCP("YFinance", port=port)
 
-    yfinance_server = FastMCP(
-        "yfinance",
-        port=port,
-        instructions="""
-    # Yahoo Finance MCP Server
+    # Adding MCP tools
     
-    This server is used to get information about a given ticker symbol from yahoo finance.
-    
-    Available tools:
-    - get_historical_stock_prices: Get historical stock prices for a given ticker symbol from yahoo finance. Include the following information: Date, Open, High, Low, Close, Volume, Adj Close.
-    - get_stock_info: Get stock information for a given ticker symbol from yahoo finance. Include the following information: Stock Price & Trading Info, Company Information, Financial Metrics, Earnings & Revenue, Margins & Returns, Dividends, Balance Sheet, Ownership, Analyst Coverage, Risk Metrics, Other.
-    - get_yahoo_finance_news: Get news for a given ticker symbol from yahoo finance.
-    - get_stock_actions: Get stock dividends and stock splits for a given ticker symbol from yahoo finance.
-    - get_financial_statement: Get financial statement for a given ticker symbol from yahoo finance. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
-    - get_holder_info: Get holder information for a given ticker symbol from yahoo finance. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
-    - get_option_expiration_dates: Fetch the available options expiration dates for a given ticker symbol.
-    - get_option_chain: Fetch the option chain for a given ticker symbol, expiration date, and option type.
-    - get_recommendations: Get recommendations or upgrades/downgrades for a given ticker symbol from yahoo finance. You can also specify the number of months back to get upgrades/downgrades for, default is 12.
-    """,
-    )
-
-    @yfinance_server.tool(
-        name="get_historical_stock_prices",
-        description="""Get historical stock prices for a given ticker symbol from yahoo finance. Include the following information: Date, Open, High, Low, Close, Volume, Adj Close.
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
-        start_date: str
-            format: yyyy-mm-dd
-        end_date: str
-            format: yyyy-mm-dd
-        interval: str
-            Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-            Intraday data cannot extend last 60 days
-            Default is "1d"
-    """,
-    )
-    async def get_historical_stock_prices(
-            ticker: str, start_date: str, end_date: str, interval: str = "1d"
-    ) -> str:
-        """Get historical stock prices for a given ticker symbol
-
+    @mcp.tool()
+    def get_stock_info(ticker: str):
+        """Get stock information for a given ticker symbol from yahoo finance. Include the following information: Stock Price & Trading Info, Company Information, Financial Metrics, Earnings & Revenue, Margins & Returns, Dividends, Balance Sheet, Ownership, Analyst Coverage, Risk Metrics, Other.
+        
         Args:
-            ticker: str
-                The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
-            start_date: str
-                format: yyyy-mm-dd
-            end_date: str
-                format: yyyy-mm-dd
-            interval: str
-                Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
-                Intraday data cannot extend last 60 days
-                Default is "1d"
+            ticker: The ticker symbol of the stock to get information for, e.g. "AAPL"
         """
-        company = yf.Ticker(ticker)
-        try:
-            if company.isin is None:
-                print(f"Company ticker {ticker} not found.")
-                return f"Company ticker {ticker} not found."
-        except Exception as e:
-            print(f"Error: getting historical stock prices for {ticker}: {e}")
-            return f"Error: getting historical stock prices for {ticker}: {e}"
-
-        # If the company is found, get the historical data
-        hist_data = company.history(start=start_date, end=end_date, interval=interval)
-        hist_data = hist_data.reset_index(names="Date")
-        hist_data = hist_data.to_json(orient="records", date_format="iso")
-        return hist_data
-
-    @yfinance_server.tool(
-        name="get_stock_info",
-        description="""Get stock information for a given ticker symbol from yahoo finance. Include the following information:
-    Stock Price & Trading Info, Company Information, Financial Metrics, Earnings & Revenue, Margins & Returns, Dividends, Balance Sheet, Ownership, Analyst Coverage, Risk Metrics, Other.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get information for, e.g. "AAPL"
-    """,
-    )
-    async def get_stock_info(ticker: str) -> str:
-        """Get stock information for a given ticker symbol"""
         company = yf.Ticker(ticker)
         try:
             if company.isin is None:
@@ -140,21 +59,14 @@ def build_server(port: int) -> FastMCP:
         info = company.info
         return json.dumps(info)
 
-    @yfinance_server.tool(
-        name="get_yahoo_finance_news",
-        description="""Get news for a given ticker symbol from yahoo finance.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get news for, e.g. "AAPL"
-    """,
-    )
-    async def get_yahoo_finance_news(ticker: str) -> str:
-        """Get news for a given ticker symbol
-
+    @mcp.tool()
+    def get_yahoo_finance_news(ticker: str):
+        """Get news for a given ticker symbol from yahoo finance.
+        
         Args:
-            ticker: str
-                The ticker symbol of the stock to get news for, e.g. "AAPL"
+            ticker: The ticker symbol of the stock to get news for, e.g. "AAPL"
+       
+        
         """
         company = yf.Ticker(ticker)
         try:
@@ -185,19 +97,15 @@ def build_server(port: int) -> FastMCP:
         if not news_list:
             print(f"No news found for company that searched with {ticker} ticker.")
             return f"No news found for company that searched with {ticker} ticker."
-        return "\n\n".join(news_list)
+        return news_list
 
-    @yfinance_server.tool(
-        name="get_stock_actions",
-        description="""Get stock dividends and stock splits for a given ticker symbol from yahoo finance.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get stock actions for, e.g. "AAPL"
-    """,
-    )
-    async def get_stock_actions(ticker: str) -> str:
-        """Get stock dividends and stock splits for a given ticker symbol"""
+    @mcp.tool()
+    def get_stock_actions(ticker: str):
+        """Get stock dividends and stock splits for a given ticker symbol from yahoo finance.
+        
+        Args:
+            ticker: The ticker symbol of the stock to get stock actions for, e.g. "AAPL"
+        """
         try:
             company = yf.Ticker(ticker)
         except Exception as e:
@@ -207,20 +115,14 @@ def build_server(port: int) -> FastMCP:
         actions_df = actions_df.reset_index(names="Date")
         return actions_df.to_json(orient="records", date_format="iso")
 
-    @yfinance_server.tool(
-        name="get_financial_statement",
-        description="""Get financial statement for a given ticker symbol from yahoo finance. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get financial statement for, e.g. "AAPL"
-        financial_type: str
-            The type of financial statement to get. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
-    """,
-    )
-    async def get_financial_statement(ticker: str, financial_type: str) -> str:
-        """Get financial statement for a given ticker symbol"""
-
+    @mcp.tool()
+    def get_financial_statement(ticker: str, financial_type: str):
+        """Get financial statement for a given ticker symbol from yahoo finance. You can choose from the following financial statement types: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow.
+        
+        Args:
+            ticker: The ticker symbol of the stock to get financial statement for, e.g. "AAPL"
+            financial_type: The type of financial statement to get. Choose from: income_stmt, quarterly_income_stmt, balance_sheet, quarterly_balance_sheet, cashflow, quarterly_cashflow
+        """
         company = yf.Ticker(ticker)
         try:
             if company.isin is None:
@@ -267,20 +169,14 @@ def build_server(port: int) -> FastMCP:
 
         return json.dumps(result)
 
-    @yfinance_server.tool(
-        name="get_holder_info",
-        description="""Get holder information for a given ticker symbol from yahoo finance. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get holder information for, e.g. "AAPL"
-        holder_type: str
-            The type of holder information to get. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
-    """,
-    )
-    async def get_holder_info(ticker: str, holder_type: str) -> str:
-        """Get holder information for a given ticker symbol"""
-
+    @mcp.tool()
+    def get_holder_info(ticker: str, holder_type: str):
+        """Get holder information for a given ticker symbol from yahoo finance. You can choose from the following holder types: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders.
+        
+        Args:
+            ticker: The ticker symbol of the stock to get holder information for, e.g. "AAPL"
+            holder_type: The type of holder information to get. Choose from: major_holders, institutional_holders, mutualfund_holders, insider_transactions, insider_purchases, insider_roster_holders
+        """
         company = yf.Ticker(ticker)
         try:
             if company.isin is None:
@@ -292,30 +188,26 @@ def build_server(port: int) -> FastMCP:
 
         if holder_type == HolderType.major_holders:
             return company.major_holders.reset_index(names="metric").to_json(orient="records")
-        if holder_type == HolderType.institutional_holders:
+        elif holder_type == HolderType.institutional_holders:
             return company.institutional_holders.to_json(orient="records")
-        if holder_type == HolderType.mutualfund_holders:
+        elif holder_type == HolderType.mutualfund_holders:
             return company.mutualfund_holders.to_json(orient="records", date_format="iso")
-        if holder_type == HolderType.insider_transactions:
+        elif holder_type == HolderType.insider_transactions:
             return company.insider_transactions.to_json(orient="records", date_format="iso")
-        if holder_type == HolderType.insider_purchases:
+        elif holder_type == HolderType.insider_purchases:
             return company.insider_purchases.to_json(orient="records", date_format="iso")
-        if holder_type == HolderType.insider_roster_holders:
+        elif holder_type == HolderType.insider_roster_holders:
             return company.insider_roster_holders.to_json(orient="records", date_format="iso")
-        return f"Error: invalid holder type {holder_type}. Please use one of the following: {HolderType.major_holders}, {HolderType.institutional_holders}, {HolderType.mutualfund_holders}, {HolderType.insider_transactions}, {HolderType.insider_purchases}, {HolderType.insider_roster_holders}."
+        else:
+            return f"Error: invalid holder type {holder_type}. Please use one of the following: {HolderType.major_holders}, {HolderType.institutional_holders}, {HolderType.mutualfund_holders}, {HolderType.insider_transactions}, {HolderType.insider_purchases}, {HolderType.insider_roster_holders}."
 
-    @yfinance_server.tool(
-        name="get_option_expiration_dates",
-        description="""Fetch the available options expiration dates for a given ticker symbol.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get option expiration dates for, e.g. "AAPL"
-    """,
-    )
-    async def get_option_expiration_dates(ticker: str) -> str:
-        """Fetch the available options expiration dates for a given ticker symbol."""
-
+    @mcp.tool()
+    def get_option_expiration_dates(ticker: str):
+        """Fetch the available options expiration dates for a given ticker symbol.
+        
+        Args:
+            ticker: The ticker symbol of the stock to get option expiration dates for, e.g. "AAPL"
+        """
         company = yf.Ticker(ticker)
         try:
             if company.isin is None:
@@ -326,31 +218,15 @@ def build_server(port: int) -> FastMCP:
             return f"Error: getting option expiration dates for {ticker}: {e}"
         return json.dumps(company.options)
 
-    @yfinance_server.tool(
-        name="get_option_chain",
-        description="""Fetch the option chain for a given ticker symbol, expiration date, and option type.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get option chain for, e.g. "AAPL"
-        expiration_date: str
-            The expiration date for the options chain (format: 'YYYY-MM-DD')
-        option_type: str
-            The type of option to fetch ('calls' or 'puts')
-    """,
-    )
-    async def get_option_chain(ticker: str, expiration_date: str, option_type: str) -> str:
+    @mcp.tool()
+    def get_option_chain(ticker: str, expiration_date: str, option_type: str):
         """Fetch the option chain for a given ticker symbol, expiration date, and option type.
-
+        
         Args:
-            ticker: The ticker symbol of the stock
+            ticker: The ticker symbol of the stock to get option chain for, e.g. "AAPL"
             expiration_date: The expiration date for the options chain (format: 'YYYY-MM-DD')
             option_type: The type of option to fetch ('calls' or 'puts')
-
-        Returns:
-            str: JSON string containing the option chain data
         """
-
         company = yf.Ticker(ticker)
         try:
             if company.isin is None:
@@ -372,25 +248,44 @@ def build_server(port: int) -> FastMCP:
         option_chain = company.option_chain(expiration_date)
         if option_type == "calls":
             return option_chain.calls.to_json(orient="records", date_format="iso")
-        if option_type == "puts":
+        elif option_type == "puts":
             return option_chain.puts.to_json(orient="records", date_format="iso")
-        return f"Error: invalid option type {option_type}. Please use one of the following: calls, puts."
+        else:
+            return f"Error: invalid option type {option_type}. Please use one of the following: calls, puts."
+    @mcp.tool()
+    def get_historical_stock_prices(ticker: str, start_date: str, end_date: str, interval: str = "1d"):
+        """Get historical stock prices for a given ticker symbol from yahoo finance. Include the following information: Date, Open, High, Low, Close, Volume, Adj Close.
+        
+        Args:
+            ticker: The ticker symbol of the stock to get historical prices for, e.g. "AAPL"
+            start_date: format: yyyy-mm-dd
+            end_date: format: yyyy-mm-dd
+            interval: Valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo. Intraday data cannot extend last 60 days. Default is "1d"
+        """
+        company = yf.Ticker(ticker)
+        try:
+            if company.isin is None:
+                print(f"Company ticker {ticker} not found.")
+                return f"Company ticker {ticker} not found."
+        except Exception as e:
+            print(f"Error: getting historical stock prices for {ticker}: {e}")
+            return f"Error: getting historical stock prices for {ticker}: {e}"
 
-    @yfinance_server.tool(
-        name="get_recommendations",
-        description="""Get recommendations or upgrades/downgrades for a given ticker symbol from yahoo finance. You can also specify the number of months back to get upgrades/downgrades for, default is 12.
-    
-    Args:
-        ticker: str
-            The ticker symbol of the stock to get recommendations for, e.g. "AAPL"
-        recommendation_type: str
-            The type of recommendation to get. You can choose from the following recommendation types: recommendations, upgrades_downgrades.
-        months_back: int
-            The number of months back to get upgrades/downgrades for, default is 12.
-    """,
-    )
-    async def get_recommendations(ticker: str, recommendation_type: str, months_back: int = 12) -> str:
-        """Get recommendations or upgrades/downgrades for a given ticker symbol"""
+        # If the company is found, get the historical data
+        hist_data = company.history(start=start_date, end=end_date, interval=interval)
+        hist_data = hist_data.reset_index(names="Date")
+        hist_data = hist_data.to_json(orient="records", date_format="iso")
+        return hist_data
+
+    @mcp.tool()
+    def get_recommendations(ticker: str, recommendation_type: str, months_back: int = 12):
+        """Get recommendations or upgrades/downgrades for a given ticker symbol from yahoo finance. You can also specify the number of months back to get upgrades/downgrades for, default is 12.
+        
+        Args:
+            ticker: The ticker symbol of the stock to get recommendations for, e.g. "AAPL"
+            recommendation_type: The type of recommendation to get. Choose from: recommendations, upgrades_downgrades
+            months_back: The number of months back to get upgrades/downgrades for, default is 12
+        """
         company = yf.Ticker(ticker)
         try:
             if company.isin is None:
@@ -402,13 +297,13 @@ def build_server(port: int) -> FastMCP:
         try:
             if recommendation_type == RecommendationType.recommendations:
                 return company.recommendations.to_json(orient="records")
-            if recommendation_type == RecommendationType.upgrades_downgrades:
+            elif recommendation_type == RecommendationType.upgrades_downgrades:
                 # Get the upgrades/downgrades based on the cutoff date
                 upgrades_downgrades = company.upgrades_downgrades.reset_index()
                 cutoff_date = pd.Timestamp.now() - pd.DateOffset(months=months_back)
                 upgrades_downgrades = upgrades_downgrades[
                     upgrades_downgrades["GradeDate"] >= cutoff_date
-                    ]
+                ]
                 upgrades_downgrades = upgrades_downgrades.sort_values("GradeDate", ascending=False)
                 # Get the first occurrence (most recent) for each firm
                 latest_by_firm = upgrades_downgrades.drop_duplicates(subset=["Firm"])
@@ -417,7 +312,73 @@ def build_server(port: int) -> FastMCP:
             print(f"Error: getting recommendations for {ticker}: {e}")
             return f"Error: getting recommendations for {ticker}: {e}"
 
-    return yfinance_server
+    @mcp.tool()
+    def get_stock_alert(ticker: str, alert_type: str, threshold: float, msg: str = None):
+        """Set up stock price alerts and display messages when conditions are met. 
+        
+        Args:
+            ticker: The stock ticker symbol to monitor, e.g. "AAPL"
+            alert_type: The type of alert. Choose from: "above" (price goes above threshold), "below" (price goes below threshold)
+            threshold: The price threshold to trigger the alert
+            msg: Message to display when alert is triggered
+        """
+        import os
+        
+        try:
+            # Get current stock price
+            company = yf.Ticker(ticker)
+            if company.isin is None:
+                return {
+                    "error": f"Company ticker {ticker} not found.",
+                    "status": "failed"
+                }
+            
+            info = company.info
+            current_price = info.get('currentPrice', None)
+            
+            if current_price is None:
+                return {
+                    "error": f"Unable to get current price for {ticker}",
+                    "status": "failed"
+                }
+            
+            # Check if alert condition is met
+            alert_triggered = False
+            if alert_type == "above" and current_price > threshold:
+                alert_triggered = True
+            elif alert_type == "below" and current_price < threshold:
+                alert_triggered = True
+            
+            # Display message if alert is triggered
+            message_output = "No message specified"
+            if alert_triggered and msg:
+                try:
+                    result = os.system(f"echo {msg}")
+                    if result == 0:
+                        message_output = result.stdout.strip()
+                    else:
+                        message_output = f"Message display failed: {result.stderr}"
+                except Exception as e:
+                    message_output = f"Message display error: {str(e)}"
+            
+            return {
+                "ticker": ticker,
+                "alert_type": alert_type,
+                "threshold": threshold,
+                "current_price": current_price,
+                "alert_triggered": alert_triggered,
+                "message": msg,
+                "message_output": message_output,
+                "status": "success"
+            }
+            
+        except Exception as e:
+            return {
+                "error": f"Error setting up stock alert for {ticker}: {str(e)}",
+                "status": "failed"
+            }
+
+    return mcp
 
 
 @click.command()
@@ -434,10 +395,16 @@ def main(transport: str, port: str):
 
     :param port: Port for SSE.
     :param transport: The transport type, e.g., `stdio` or `sse`.
+    :return:
     """
     assert transport.lower() in ["stdio", "sse"], \
         "Transport should be `stdio` or `sse`"
-    logger = get_logger("Service:yahoo_finance")
+    logger = get_logger("Service:YFinance")
     logger.info("Starting the MCP server")
     mcp = build_server(int(port))
     mcp.run(transport=transport.lower())
+
+
+if __name__ == "__main__":
+    # Initialize and run the server
+    main() 

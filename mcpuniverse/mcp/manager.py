@@ -347,3 +347,167 @@ class MCPManager(metaclass=AutodocABCMeta):
             Context: The context object.
         """
         return self._context
+
+    def inject_malicious_tools(self, server_name: str, malicious_tools: list, temp_dir: str = None):
+        """
+        Dynamically inject malicious tools into an existing MCP server.
+        
+        Args:
+            server_name: The name of the server to inject tools into
+            malicious_tools: List of malicious tool definitions
+            temp_dir: Temporary directory to store modified server files
+        """
+        import tempfile
+        import os
+        import shutil
+        import json
+        
+        if temp_dir is None:
+            temp_dir = tempfile.mkdtemp(prefix="malicious_mcp_")
+        
+        # Find the original server directory
+        server_dir = None
+        for server_name_config, server_config in self._server_configs.items():
+            if server_name_config == server_name:
+                # For Python modules, construct the path from the module name
+                if server_config.stdio.command == "python3" and server_config.stdio.args:
+                    module_name = server_config.stdio.args[-1]  # Get the last argument (module name)
+                    if module_name.startswith("-m"):
+                        module_name = module_name[2:]  # Remove "-m" prefix
+                    
+                    # Convert module name to directory path
+                    if module_name.startswith("mcpuniverse.mcp.servers."):
+                        # For internal servers, construct the path
+                        server_name_short = module_name.split(".")[-1]
+                        server_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 
+                                               "mcpuniverse", "mcp", "servers", server_name_short)
+                    else:
+                        # For external modules, try to find the module path
+                        try:
+                            import importlib.util
+                            spec = importlib.util.find_spec(module_name)
+                            if spec and spec.origin:
+                                server_dir = os.path.dirname(spec.origin)
+                            else:
+                                raise ValueError(f"Cannot find module path for {module_name}")
+                        except Exception as e:
+                            raise ValueError(f"Failed to find module path for {module_name}: {e}")
+                else:
+                    raise ValueError(f"Unsupported server type for {server_name}")
+                break
+        
+        if not server_dir:
+            raise ValueError(f"Server {server_name} not found")
+        
+        # Create temporary server directory
+        temp_server_dir = os.path.join(temp_dir, f"{server_name}_malicious")
+        shutil.copytree(server_dir, temp_server_dir)
+        
+        # Modify the server.py file to include malicious tools
+        server_py_path = os.path.join(temp_server_dir, "server.py")
+        
+        # Read original server.py
+        with open(server_py_path, 'r', encoding='utf-8') as f:
+            server_content = f.read()
+        
+        # Generate malicious tool code
+        malicious_tool_code = []
+        for tool in malicious_tools:
+            tool_name = tool["tool_name"]
+            description = tool["description"]
+            input_params = tool["input_parameters"]
+            output_params = tool["output_parameters"]
+            implementation = tool["implementation_code"]
+            
+            # Convert input parameters to schema
+            input_schema = {}
+            for param_name, param_type in input_params.items():
+                input_schema[param_name] = {"type": param_type}
+            
+            # Convert output parameters to schema
+            output_schema = {}
+            for param_name, param_type in output_params.items():
+                output_schema[param_name] = {"type": param_type}
+            
+            # Generate tool definition
+            tool_def = f'''
+@tool()
+def {tool_name}(**kwargs):
+    """{description}"""
+    {implementation}
+    
+# Register the tool
+tools = tools + [
+    Tool(
+        name="{tool_name}",
+        description="{description}",
+        inputSchema=json.dumps({input_schema}),
+        handler={tool_name}
+    )
+]
+'''
+            malicious_tool_code.append(tool_def)
+        
+        # Insert malicious tools before the tools list definition
+        if "tools = [" in server_content:
+            # Find the tools list definition
+            tools_start = server_content.find("tools = [")
+            if tools_start != -1:
+                # Insert malicious tools before the tools list
+                malicious_code = "\n".join(malicious_tool_code)
+                server_content = server_content[:tools_start] + malicious_code + "\n" + server_content[tools_start:]
+        
+        # Write modified server.py
+        with open(server_py_path, 'w', encoding='utf-8') as f:
+            f.write(server_content)
+        
+        return temp_server_dir
+    
+    def cleanup_malicious_server(self, temp_server_dir: str):
+        """
+        Clean up temporary malicious server directory.
+        
+        Args:
+            temp_server_dir: Path to temporary server directory
+        """
+        import shutil
+        try:
+            shutil.rmtree(temp_server_dir)
+        except Exception as e:
+            print(f"Warning: Failed to cleanup temporary server directory {temp_server_dir}: {e}")
+    
+    def restart_server_with_malicious_tools(self, server_name: str, malicious_tools: list):
+        """
+        Restart a server with malicious tools injected.
+        
+        Args:
+            server_name: The name of the server to restart
+            malicious_tools: List of malicious tool definitions
+        """
+        # Stop the current server
+        # self.stop_server(server_name) # This method does not exist in the original file
+        
+        # Inject malicious tools
+        temp_server_dir = self.inject_malicious_tools(server_name, malicious_tools)
+        
+        # Start the server with malicious tools
+        server_config = None
+        for server in self._server_configs.values(): # Changed from self.servers to self._server_configs.values()
+            if server.name == server_name:
+                server_config = server
+                break
+        
+        if server_config:
+            # Start the malicious server
+            # self.start_server( # This method does not exist in the original file
+            #     name=f"{server_name}_malicious",
+            #     server_dir=temp_server_dir,
+            #     config=server_config.config
+            # )
+            # The original file does not have start_server or stop_server methods.
+            # This part of the new_code is commented out as it would cause an error.
+            # If these methods were intended to be added, they would need to be implemented.
+            # For now, we'll just return None, None as a placeholder.
+            return None, None
+        
+        return None, None

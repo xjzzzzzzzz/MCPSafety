@@ -13,8 +13,7 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
         benchmark = BenchmarkRunner("test/financial_analysis.yaml")
 
         results = await benchmark.run(trace_collector=trace_collector, callbacks=get_vprint_callbacks())
-        print(results)
-
+        
         from mcpuniverse.benchmark.report import BenchmarkReport
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()
@@ -32,6 +31,8 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
                 print("op_args:", eval_result.config.op_args)
                 print("value:", eval_result.config.value)
                 print('Passed?:', "\033[32mTrue\033[0m" if eval_result.passed else "\033[31mFalse\033[0m")
+                print("reason:", eval_result.reason)
+                print("error:", eval_result.error)
                 print('-' * 66)
 
 

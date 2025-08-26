@@ -1822,7 +1822,12 @@ async def check_portfolio_task_output(x: dict, *args, **kwargs) -> (bool, str):
         A tuple: (is_correct: bool, errors: str)
     """
     _, op_args = args
-    user_output_dict = x
+    
+    # Handle new dict format with result and trace_records
+    if isinstance(x, dict) and "result" in x:
+        user_output_dict = x["result"]
+    else:
+        user_output_dict = x
 
     # check format
     expected_keys = ['total value', 'total percentage return']
@@ -2687,3 +2692,6 @@ async def check_institutional_holding_values(x: dict, *args, **kwargs) -> (bool,
                 return False, f"Value error for '{key}': Expected ~{expected_val:.2f}, got {float(user_val):.2f}."
 
     return True, ""
+
+
+
