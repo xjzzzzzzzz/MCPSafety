@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # YFinance 测试指南
 
 ## 概述
@@ -113,6 +112,14 @@ touch /tmp/exploit
 
 报告将保存到 log/ 文件夹下
 
-=======
-# MCPSafety
->>>>>>> c72378c11dd947edee03c94e3b9eed7f446bf04f
+
+## Docker 
+### build
+``` shell
+docker build -t mcpsafety .
+```
+
+### Run
+``` shell
+docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_financial_analysis.py"
+```

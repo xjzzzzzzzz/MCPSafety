@@ -35,3 +35,6 @@ yfinance==0.2.61
 blender-mcp==1.1.3
 playwright==1.52.0
 mathutils==3.3.0
+
+pytest==8.3.5
+mcp-server-calculator==0.1.1
