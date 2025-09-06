@@ -1,92 +1,116 @@
 {
   "date": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.date"
+        "-m",
+        "mcpuniverse.mcp.servers.date"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.date",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.date",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     }
   },
-
   "weather": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.weather"
+        "-m",
+        "mcpuniverse.mcp.servers.weather"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.weather",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.weather",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     }
   },
-
   "echo": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.echo"
+        "-m",
+        "mcpuniverse.mcp.servers.echo"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.echo",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.echo",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     }
   },
-
+  "terminal": {
+    "stdio": {
+      "command": "python",
+      "args": [
+        "-m",
+        "mcpuniverse.mcp.servers.terminal"
+      ]
+    }
+  },
   "google-search": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.google_search"
+        "-m",
+        "mcpuniverse.mcp.servers.google_search"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.google_search",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.google_search",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     },
     "env": {
       "SERP_API_KEY": "{{SERP_API_KEY}}"
     }
   },
-
   "wikipedia": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.wikipedia"
+        "-m",
+        "mcpuniverse.mcp.servers.wikipedia"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.wikipedia",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.wikipedia",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     }
   },
-
   "google-maps": {
     "stdio": {
       "command": "npx",
@@ -99,17 +123,16 @@
       "GOOGLE_MAPS_API_KEY": "{{GOOGLE_MAPS_API_KEY}}"
     }
   },
-
   "fetch": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcp_server_fetch",
+        "-m",
+        "mcp_server_fetch",
         "--ignore-robots-txt"
       ]
     }
   },
-
   "no_hub": {
     "stdio": {
       "command": "docker",
@@ -126,45 +149,42 @@
       "GITHUB_PERSONAL_ACCESS_TOKEN": "{{GITHUB_PERSONAL_ACCESS_TOKEN}}"
     }
   },
-
   "github": {
     "stdio": {
-      "command": "docker",
+      "command": "python",
       "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
+        "-m",
+        "mcpuniverse.mcp.servers.github"
       ]
     },
     "env": {
       "GITHUB_PERSONAL_ACCESS_TOKEN": "{{GITHUB_PERSONAL_ACCESS_TOKEN}}"
     }
   },
-
   "google-sheets": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.google_sheets"
+        "-m",
+        "mcpuniverse.mcp.servers.google_sheets"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.google_sheets",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.google_sheets",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     },
     "env": {
       "SERVICE_ACCOUNT_PATH": "{{GOOGLE_SERVICE_ACCOUNT_PATH}}",
-      "DRIVE_FOLDER_ID": "{{GOOGLE_DRIVE_FOLDER_ID}}"
+      "GOOGLE_DRIVE_FOLDER_ID": "{{GOOGLE_DRIVE_FOLDER_ID}}"
     }
   },
-
   "filesystem": {
     "stdio": {
       "command": "npx",
@@ -175,7 +195,6 @@
       ]
     }
   },
-
   "slack": {
     "stdio": {
       "command": "npx",
@@ -189,7 +208,6 @@
       "SLACK_TEAM_ID": "{{SLACK_TEAM_ID}}"
     }
   },
-
   "postgres": {
     "stdio": {
       "command": "npx",
@@ -200,54 +218,56 @@
       ]
     }
   },
-
   "calculator": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcp_server_calculator"
+        "-m",
+        "mcp_server_calculator"
       ]
     }
   },
-
   "yfinance": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.yahoo_finance"
+        "-m",
+        "mcpuniverse.mcp.servers.yahoo_finance"
       ]
     },
     "sse": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.yahoo_finance",
-        "--transport", "sse",
-        "--port", "{{PORT}}"
+        "-m",
+        "mcpuniverse.mcp.servers.yahoo_finance",
+        "--transport",
+        "sse",
+        "--port",
+        "{{PORT}}"
       ]
     }
   },
-
   "blender": {
     "stdio": {
-      "command": "python3",
+      "command": "python",
       "args": [
-        "-m", "mcpuniverse.mcp.servers.blender"
+        "-m",
+        "mcpuniverse.mcp.servers.blender"
       ]
     }
   },
-
   "notion": {
     "stdio": {
       "command": "npx",
       "args": [
-        "-y", "@notionhq/notion-mcp-server"
+        "-y",
+        "@notionhq/notion-mcp-server"
       ]
     },
     "env": {
       "OPENAPI_MCP_HEADERS": "{\"Authorization\": \"Bearer {{NOTION_API_KEY}}\", \"Notion-Version\": \"2022-06-28\" }"
     }
   },
-
   "playwright": {
     "stdio": {
       "command": "npx",
@@ -258,13 +278,11 @@
       ]
     }
   },
-
   "markitdown": {
     "stdio": {
       "command": "markitdown-mcp"
-    } 
+    }
   },
-
   "paypal": {
     "stdio": {
       "command": "npx",

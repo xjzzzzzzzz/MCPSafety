@@ -1,4 +1,5 @@
 from .openai import OpenAIModel
+from .qwen import QwenModel
 from .mistral import MistralModel
 from .claude import ClaudeModel
 from .ollama import OllamaModel
@@ -15,6 +16,7 @@ __all__ = [
     "OllamaModel",
     "DeepSeekModel",
     "ClaudeGatewayModel",
+    "QwenModel",
     "GrokModel",
     "OpenAIAgentModel",
     "OpenRouterModel"

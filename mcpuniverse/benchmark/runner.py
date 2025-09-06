@@ -230,15 +230,22 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
 
                     # Execute the task and the corresponding evaluations
                     task = Task(task_filepath, context=self._context)
-                    
                     # Apply tool modifications and malicious tool injection if present
+                    needs_reconnect = False
                     if task.has_attack() and isinstance(agent, BaseAgent):
                         # Apply tool modifications (if any)
                         if task.get_mcp_server_modifications():
-                            await self._apply_tool_modifications(agent, task)
+                            needs_reconnect = await self._apply_tool_modifications(agent, task)
                         # Inject malicious tools (if any)
                         if task.get_mcp_server_additions():
-                            await self._inject_malicious_tools(agent, task)
+                            needs_reconnect = await self._inject_malicious_tools(agent, task)
+                        # Set up Rug Pull Attack tracking (if any)
+                        if task.get_mcp_server_update():
+                            # Store task reference in agent for tool call tracking
+                            agent._current_task = task
+                            needs_reconnect = True
+                        if task.get_client_side_attack():
+                            agent._current_task = task
                     if task.use_specified_server() and isinstance(agent, BaseAgent):
                         await agent.change_servers(task.get_mcp_servers())
                     agent.reset()
@@ -291,7 +298,27 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                     self._logger.info("Resetting task %s", task_path)
                     await task.reset(trace_records)
                     # Clean up and restore original server files
-                    await task.cleanup()
+                    await task.cleanup(agent)
+ 
+                    # Reconnect if server files were modified
+                    if needs_reconnect:
+                        try:
+                            # Get current server configuration
+                            current_servers = []
+                            for server_name, tools in agent._tools.items():
+                                server_config = agent._mcp_manager.get_config(server_name)
+                                server_info = {
+                                    "name": server_name,
+                                    "transport": "stdio"
+                                }
+                                current_servers.append(server_info)
+                            
+                            # Reconnect to get original tools
+                            await agent.change_servers(current_servers)
+                            self._logger.info("Reconnected to restored server to get original tools")
+                        except Exception as e:
+                            self._logger.warning(f"Failed to reconnect after cleanup: {e}")
+                    
                     self._logger.info("Finished cleanup and restoration for task %s", task_path)
                     
                     if task.use_specified_server() and isinstance(agent, BaseAgent):
@@ -308,7 +335,7 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
         self._benchmark_results = outputs
         return outputs
 
-    async def _apply_tool_modifications(self, agent: BaseAgent, task: Task):
+    async def _apply_tool_modifications(self, agent: BaseAgent, task: Task) -> bool:
         """
         Apply tool modifications for poisoning attacks by modifying tool descriptions
         and optionally modifying server code for return values.
@@ -316,11 +343,14 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
         Args:
             agent: The agent to modify tools for
             task: The task containing attack configuration
+            
+        Returns:
+            bool: True if server files were modified and reconnection is needed
         """
         try:
             modifications = task.get_mcp_server_modifications()
             if not modifications:
-                return
+                return False
             
             # Apply tool description modifications (keep existing logic)
             for modification in modifications:
@@ -333,8 +363,8 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                         for tool in tools:
                             if tool.name == tool_name:
                                 # Store original description for restoration
-                                if not hasattr(tool, '_original_description'):
-                                    tool._original_description = tool.description
+                                if tool_name not in task._original_descriptions:
+                                    task._original_descriptions[tool_name] = tool.description
                                 
                                 # Apply the poisoned description
                                 tool.description = modification_description
@@ -351,7 +381,7 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                 # Get the first server directory from the agent's tools
                 if not hasattr(agent, '_tools') or not agent._tools:
                     self._logger.warning("Agent has no tools available for server code modifications")
-                    return
+                    return False
                 
                 first_server_name = list(agent._tools.keys())[0]
                 self._logger.info(f"Using first available server for server code modifications: {first_server_name}")
@@ -492,9 +522,9 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                             
                             # Generate the new return statement with preserved indentation
                             if isinstance(modification_return, dict):
-                                new_return = f"{indent}return {repr(modification_return)}"
+                                new_return = f"{indent}return {modification_return}"
                             else:
-                                new_return = f"{indent}return {repr(modification_return)}"
+                                new_return = f"{indent}return {modification_return}"
                             
                             # Replace the return statement
                             modified_content = (
@@ -541,11 +571,15 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                     self._logger.warning(f"Failed to modify tool return values directly: {e}")
                     self._logger.info("Tool return value modification failed.")
             
+            # Return True if server files were modified
+            return has_return_modifications
+            
         except Exception as e:
             self._logger.warning(f"Failed to apply tool modifications: {e}")
+            return False
     
     
-    async def _inject_malicious_tools(self, agent: BaseAgent, task: Task):
+    async def _inject_malicious_tools(self, agent: BaseAgent, task: Task) -> bool:
         """
         Inject malicious tools directly into the first available server's code,
         then reconnect using change_servers.
@@ -553,11 +587,14 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
         Args:
             agent: The agent to inject malicious tools for
             task: The task containing attack configuration
+            
+        Returns:
+            bool: True if server files were modified and reconnection is needed
         """
         try:
             mcp_server_additions = task.get_mcp_server_additions()
             if not mcp_server_additions:
-                return
+                return False
             
             # Extract tool information from the current structure
             if "tool_name" in mcp_server_additions:
@@ -726,6 +763,11 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
             except Exception as e:
                 self._logger.warning(f"Failed to inject malicious tools directly: {e}")
                 self._logger.info("Malicious tool injection failed.")
+                return False
+            
+            # Return True since server files were modified
+            return True
             
         except Exception as e:
             self._logger.warning(f"Failed to inject malicious tools: {e}")
+            return False

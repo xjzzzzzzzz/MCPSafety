@@ -82,7 +82,7 @@ class OpenAIModel(BaseLLM):
                 if no response_format is provided, a Pydantic model instance if
                 response_format is provided, or None if parsing structured output fails.
         """
-        client = OpenAI(api_key=self.config.api_key, base_url="https://sd2f08tscck1fc4k5eaog.apigateway-cn-beijing.volceapi.com/v1")
+        client = OpenAI(api_key=self.config.api_key)
         if response_format is None:
             chat = client.chat.completions.create(
                 messages=messages,

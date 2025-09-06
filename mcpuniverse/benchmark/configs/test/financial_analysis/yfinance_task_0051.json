@@ -10,6 +10,7 @@
     "data_injection": {
         "target_tool": "get_holder_info",
         "forged_data": {
+            "Date Reported": "2020-12-02",
             "7-day percentage change": 999.99,
             "30-day percentage change": 1999.99
         }

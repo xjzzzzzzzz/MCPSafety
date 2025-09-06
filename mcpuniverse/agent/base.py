@@ -192,6 +192,7 @@ class BaseAgent(Executor, ExportConfigMixin, metaclass=ComponentABCMeta):
             client = await self._mcp_manager.build_client(
                 server_name, transport=server.get("transport", "stdio"))
             client.project_id = self._project_id
+            client._agent = self  # Store agent reference for tool call tracking
             self._mcp_clients[server_name] = client
         # Get the tools information
         self._tools = {}
@@ -406,31 +407,54 @@ class BaseAgent(Executor, ExportConfigMixin, metaclass=ComponentABCMeta):
                                 self._logger.info(
                                     "Executing tool %s of server %s", tool_call["tool"], tool_call["server"])
                                 self._logger.info("With arguments: %s", str(tool_call["arguments"]))
+                            # Set tracer in task for replay injection
+                            if hasattr(self, '_current_task') and self._current_task:
+                                self._current_task._tracer = t
+                            
                             response = await self._mcp_clients[tool_call["server"]].execute_tool(
                                 tool_call["tool"], tool_call["arguments"], callbacks=callbacks)
+                            
+                            if isinstance(response, dict) and "result" in response:
+                                actual_tool_name = response.get("actual_tool_name", tool_call["tool"])
+                                actual_arguments = response.get("actual_arguments", tool_call["arguments"])
+                                actual_result = response["result"]
+                                
+                                t.add({
+                                    "type": "tool",
+                                    "class": self.__class__.__name__,
+                                    "server": tool_call["server"],
+                                    "tool_name": actual_tool_name,  
+                                    "arguments": actual_arguments,  
+                                    "response": actual_result.model_dump(mode="json")
+                                    if isinstance(actual_result, BaseModel) else actual_result,
+                                    "error": ""
+                                })
+                                return actual_result
+                            else:
+                                t.add({
+                                    "type": "tool",
+                                    "class": self.__class__.__name__,
+                                    "server": tool_call["server"],
+                                    "tool_name": tool_call["tool"],
+                                    "arguments": tool_call["arguments"],
+                                    "response": response.model_dump(mode="json")
+                                    if isinstance(response, BaseModel) else response,
+                                    "error": ""
+                                })
+                                return response
+                        except Exception as e:
                             t.add({
                                 "type": "tool",
                                 "class": self.__class__.__name__,
                                 "server": tool_call["server"],
                                 "tool_name": tool_call["tool"],
                                 "arguments": tool_call["arguments"],
-                                "response": response.model_dump(mode="json")
-                                if isinstance(response, BaseModel) else response,
-                                "error": ""
-                            })
-                            return response
-                        except Exception as e:
-                            t.add({
-                                "type": "tool",
-                                "class": self.__class__.__name__,
-                                "tool_name": tool_call["tool"],
-                                "arguments": tool_call["arguments"],
                                 "response": "",
                                 "error": str(e)
                             })
-                            raise RuntimeError(f"Error occurred during executing tool {tool_call['tool']}") from e
-                    raise RuntimeError(f"Server {tool_call['server']} has no tool {tool_call['tool']}")
-                raise RuntimeError("The input of `call_tool` function has a wrong format")
+                            raise RuntimeError(f"Error occurred during executing tool {tool_call['tool']}: {str(e)}") from e
+                    raise RuntimeError(f"Server {tool_call['server']} has no tool {tool_call['tool']}. Available tools: {[t.name for t in self._tools[tool_call['server']]]}")
+                raise RuntimeError(f"The input of `call_tool` function has a wrong format. Expected: server, tool, arguments. Got: {list(tool_call.keys()) if isinstance(tool_call, dict) else type(tool_call)}")
             except json.JSONDecodeError as e:
                 t.add({
                     "type": "tool",
@@ -440,7 +464,7 @@ class BaseAgent(Executor, ExportConfigMixin, metaclass=ComponentABCMeta):
                     "response": "",
                     "error": str(e)
                 })
-                raise RuntimeError("Failed to parse the input of `call_tool` function") from e
+                raise RuntimeError(f"Failed to parse the input of `call_tool` function: {str(e)}") from e
 
     @property
     def initialized(self) -> bool:

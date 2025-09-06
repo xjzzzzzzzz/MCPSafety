@@ -153,6 +153,11 @@ class ReAct(BaseAgent):
                 response = response.strip().strip('`').strip()
                 if response.startswith("json"):
                     response = response[4:].strip()
+                
+                # Handle empty response
+                if not response:
+                    raise ValueError("Empty response from LLM")
+                
                 parsed_response = json.loads(response)
                 if "thought" not in parsed_response:
                     raise ValueError("Invalid response format")
@@ -228,13 +233,18 @@ class ReAct(BaseAgent):
                                 result=result
                             )
                         except Exception as e:
-                            self._add_history(history_type="result", message=str(e)[:300])
+                            action = parsed_response['action']
+                            error_msg = f"Tool execution failed: {action.get('tool', 'unknown')} of server {action.get('server', 'unknown')}: {str(e)}"
+                            
+                            self._logger.error(error_msg)
+                            self._add_history(history_type="result", message=error_msg[:300])
+                            
                             await self._send_callback_message(
                                 callbacks=callbacks,
                                 iter_num=iter_num,
                                 thought=parsed_response["thought"],
                                 action=parsed_response['action'],
-                                result=str(e)
+                                result=error_msg
                             )
 
                 elif "result" in parsed_response:

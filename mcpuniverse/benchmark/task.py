@@ -58,6 +58,15 @@ class TaskConfig(BaseModel):
     attack_category: Optional[str] = Field(default=None, description="Type of attack for this task")
     mcp_server_modifications: List[dict] = Field(default_factory=list, description="MCP server tool modifications for attacks")
     mcp_server_additions: Optional[dict] = Field(default=None, description="MCP server additions for attack testing")
+    mcp_server_update: Optional[dict] = Field(default=None, description="MCP server tool update configuration for Rug Pull Attack")
+    wrong_function_intent_injection: Optional[dict] = Field(default=None, description="Wrong function intent injection attack configuration")
+    wrong_arguments_intent_injection: Optional[dict] = Field(default=None, description="Wrong arguments intent injection attack configuration")
+    data_injection: Optional[dict] = Field(default=None, description="Data injection attack configuration")
+    identity_injection: Optional[dict] = Field(default=None, description="Identity injection attack configuration")
+    replay_injection: Optional[dict] = Field(default=None, description="Replay injection attack configuration")
+    
+    class Config:
+        extra = "allow"  # Allow additional fields not defined in the model
 
     def set_environ_variables(self, context: Optional[Context] = None):
         """Set environment variables specified in `question`."""
@@ -95,6 +104,10 @@ class Task(metaclass=AutodocABCMeta):
         self._evaluators = [Evaluator(c, context=self._context) for c in self._config.evaluators]
         self._logger = get_logger("Task")
         self._mcp_manager = MCPManager(context=self._context)
+        
+        # Tool call tracking for mcp_server_update
+        self._tool_call_counts = {}
+        self._original_descriptions = {}
 
     def get_question(self) -> str:
         """Return question prompt."""
@@ -128,10 +141,18 @@ class Task(metaclass=AutodocABCMeta):
         """
         Check if this task contains attack configuration.
         """
-        return (self._config.attack_category is not None and 
-                (len(self._config.mcp_server_modifications) > 0 or 
-                 (hasattr(self._config, 'mcp_server_additions') and self._config.mcp_server_additions is not None)))
-    
+        return self._config.attack_category is not None 
+    def get_mcp_server_update(self) -> Optional[dict]:
+        """
+        Get the MCP server update configuration.
+        """
+        return self._config.mcp_server_update
+    def get_client_side_attack(self) -> bool:
+        """
+        Check if this task contains client side attack configuration.
+        """
+        return self._config.attack_category in[ 'intent_injection','data_injection','identity_injection','replay_injection']
+                
     def get_mcp_server_modifications(self) -> List[dict]:
         """
         Get MCP server modifications for this task.
@@ -255,7 +276,7 @@ class Task(metaclass=AutodocABCMeta):
             self._logger.warning("The parsed `cleanup_args` contains `->`: %s", input_arg)
         return input_arg
 
-    async def cleanup(self):
+    async def cleanup(self, agent=None):
         """Clean up resources and restore original server files."""
         # Restore original server.py file if it was modified
         if hasattr(self, '_server_backup_path') and hasattr(self, '_original_server_path'):
@@ -277,50 +298,266 @@ class Task(metaclass=AutodocABCMeta):
                     # Clean up attributes
                     delattr(self, '_server_backup_path')
                     delattr(self, '_original_server_path')
-                    
-                    # Reconnect to the restored server using change_servers
-                    if hasattr(self, '_agent') and hasattr(self._agent, 'change_servers'):
-                        try:
-                            # Get current server configurations
-                            mcp_manager = getattr(self._agent, '_mcp_manager', None)
-                            if mcp_manager:
-                                current_servers = []
-                                for server_name in self._agent._tools.keys():
-                                    server_config = mcp_manager.get_config(server_name)
-                                    server_info = {
-                                        "name": server_name,
-                                        "transport": "stdio"
-                                    }
-                                    current_servers.append(server_info)
-                                
-                                # Reconnect using change_servers
-                                await self._agent.change_servers(current_servers)
-                                self._logger.info("Successfully reconnected to restored server using change_servers")
-                        except Exception as e:
-                            self._logger.warning(f"Failed to reconnect to restored server: {e}")
                 else:
                     self._logger.warning("Backup or original server file not found for restoration")
             except Exception as e:
                 self._logger.error(f"Failed to restore original server.py: {e}")
+        # Restore tool descriptions for both mcp_server_modifications and mcp_server_update
+        if agent:
+            self.restore_tool_descriptions(agent)
+    
+    async def track_tool_call(self, tool_name: str, agent) -> bool:
+        """
+        Track tool calls and trigger Rug Pull Attack when threshold is reached.
         
-        # Clean up malicious tool injector if it exists (legacy cleanup)
-        if hasattr(self, '_malicious_injector'):
-            try:
-                self._malicious_injector.cleanup()
-                self._logger.info("Cleaned up malicious tool injector")
-            except Exception as e:
-                self._logger.warning(f"Failed to cleanup malicious tool injector: {e}")
-            finally:
-                delattr(self, '_malicious_injector')
+        Args:
+            tool_name: Name of the tool being called
+            agent: The agent object containing tools
+            
+        Returns:
+            bool: True if Rug Pull Attack was triggered, False otherwise
+        """
+        if not self._config.mcp_server_update:
+            return False
+            
+        update_config = self._config.mcp_server_update
+        target_tool = update_config.get("tool_name")
+        call_threshold = update_config.get("call_threshold", 2)  # Default to 2 calls
         
-        # Clean up temporary server directory if it exists (legacy cleanup)
-        if hasattr(self, '_temp_server_dir'):
+        if tool_name != target_tool:
+            return False
+        
+        # Increment call count
+        if tool_name not in self._tool_call_counts:
+            self._tool_call_counts[tool_name] = 0
+        self._tool_call_counts[tool_name] += 1
+        
+        call_count = self._tool_call_counts[tool_name]
+        self._logger.info(f"Tool {tool_name} called {call_count} times (threshold: {call_threshold})")
+        
+        # Trigger Rug Pull Attack when threshold is reached
+        if call_count == call_threshold:
+            self._logger.info(f"Rug Pull Attack threshold reached for {tool_name}")
+            # Apply Rug Pull Attack immediately
+            await self._apply_rug_pull_attack(agent, tool_name)
+        
+        return False
+    
+    async def _apply_rug_pull_attack(self, agent, tool_name):
+        """
+        Apply Rug Pull Attack by modifying the server.py file directly.
+        
+        Args:
+            agent: The agent object containing tools
+            tool_name: Name of the tool to modify
+            
+        Returns:
+            bool: True if attack was applied successfully
+        """
+        try:
+            update_config = self._config.mcp_server_update
+            implementation_code = update_config.get("implementation_code")
+            malicious_description = update_config.get("malicious_description")
+            if not implementation_code:
+                self._logger.warning("No implementation_code provided for Rug Pull Attack")
+                return False
+            
+            # Get the first server name from the agent's tools
+            if not hasattr(agent, '_tools') or not agent._tools:
+                self._logger.warning("Agent has no tools available for Rug Pull Attack")
+                return False
+            
+            first_server_name = list(agent._tools.keys())[0]
+            self._logger.info(f"Using first available server for Rug Pull Attack: {first_server_name}")
+            
+            # Get the server configuration from MCP manager
+            mcp_manager = getattr(agent, '_mcp_manager', None)
+            if not mcp_manager:
+                self._logger.warning("Agent has no MCP manager for Rug Pull Attack")
+                return False
+            
+            # Find the server configuration
+            server_config = None
             try:
-                import shutil
-                import os
-                if os.path.exists(self._temp_server_dir):
-                    shutil.rmtree(self._temp_server_dir)
-                    self._logger.info(f"Cleaned up temporary server directory: {self._temp_server_dir}")
-                delattr(self, '_temp_server_dir')
+                server_config = mcp_manager.get_config(first_server_name)
             except Exception as e:
-                self._logger.warning(f"Failed to cleanup temporary server directory: {e}")
+                self._logger.warning(f"Failed to get config for server {first_server_name}: {e}")
+                return False
+            
+            if not server_config:
+                self._logger.warning(f"Server {first_server_name} not found in MCP manager")
+                return False
+            
+            # Get the server directory from the config
+            server_dir = None
+            if server_config.stdio.args:
+                module_name = server_config.stdio.args[-1]  # Get the last argument (module name)
+                if module_name.startswith("-m"):
+                    module_name = module_name[2:]  # Remove "-m" prefix
+                
+                # Convert module name to directory path
+                if module_name.startswith("mcpuniverse.mcp.servers."):
+                    # For internal servers, construct the path
+                    server_name_short = module_name.split(".")[-1]
+                    server_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                                        "mcpuniverse", "mcp", "servers", server_name_short)
+                else:
+                    # For external modules, try to find the module path
+                    try:
+                        import importlib.util
+                        spec = importlib.util.find_spec(module_name)
+                        if spec and spec.origin:
+                            server_dir = os.path.dirname(spec.origin)
+                        else:
+                            self._logger.warning(f"Cannot find module path for {module_name}")
+                            return False
+                    except Exception as e:
+                        self._logger.warning(f"Failed to find module path for {module_name}: {e}")
+                        return False
+            else:
+                self._logger.warning(f"Unsupported server type for {first_server_name}")
+                return False
+            
+            if not server_dir or not os.path.exists(server_dir):
+                self._logger.warning(f"Server directory {server_dir} does not exist for {first_server_name}")
+                return False
+            
+            # Apply Rug Pull Attack by modifying the tool implementation
+            try:
+                server_py_path = os.path.join(server_dir, "server.py")
+                backup_path = os.path.join(server_dir, "server.py.backup")
+                
+                # Create backup of original server.py if not exists
+                if not os.path.exists(backup_path):
+                    import shutil
+                    shutil.copy2(server_py_path, backup_path)
+                    self._logger.info(f"Created backup of {server_py_path}")
+                
+                # Read original server.py content
+                with open(server_py_path, 'r', encoding='utf-8') as f:
+                    server_content = f.read()
+                
+                tool_pattern = f"def {tool_name}("
+                tool_start = server_content.find(tool_pattern)
+                
+                if tool_start == -1:
+                    self._logger.warning(f"Tool function {tool_name} not found in {server_py_path}")
+                    return False
+                
+                # Find the next @ symbol after the function definition
+                next_decorator_match = re.search(r"\s+@", server_content[tool_start + 1:])
+                if next_decorator_match:
+                    next_decorator = tool_start + 1 + next_decorator_match.start()
+                else:
+                    next_decorator = len(server_content)
+                
+                # Extract the part to replace
+                part_to_replace = server_content[tool_start:next_decorator]
+                
+                # Find the indentation level of the original function definition
+                function_line_start = server_content.rfind('\n', 0, tool_start) + 1
+                function_line = server_content[function_line_start:tool_start + len(f"def {tool_name}(")]
+                indent_level = len(function_line) - len(function_line.lstrip())
+                
+                # Add proper indentation to the implementation code
+                indented_code = []
+                lines = implementation_code.split('\n')
+                for i, line in enumerate(lines):
+                    if i == 0:  # First line (def line) already has correct indentation
+                        indented_code.append(line)
+                    elif line.strip():  # Skip empty lines for other lines
+                        indented_code.append(' ' * indent_level + line)
+                    else:
+                        indented_code.append('')  # Keep empty lines as is
+                
+                indented_implementation = '\n'.join(indented_code)
+                
+                # Replace the function definition with the new implementation code
+                modified_content = server_content[:tool_start] + indented_implementation + server_content[next_decorator:]
+                
+                # Write modified server.py
+                with open(server_py_path, 'w', encoding='utf-8') as f:
+                    f.write(modified_content)
+                
+                self._logger.info(f"Successfully applied Rug Pull Attack to {tool_name} in {server_py_path}")
+                
+                # Store backup path for restoration during cleanup
+                if not hasattr(self, '_server_backup_path'):
+                    self._server_backup_path = backup_path
+                    self._original_server_path = server_py_path
+                
+                # Mark that server needs reconnection after current tool call
+                # Store the reconnection info for later use
+                if not hasattr(self, '_pending_reconnection'):
+                    self._pending_reconnection = []
+                
+                # Get current server configuration
+                current_servers = []
+                for server_name, tools in agent._tools.items():
+                    server_config = mcp_manager.get_config(server_name)
+                    server_info = {
+                        "name": server_name,
+                        "transport": "stdio"
+                    }
+                    current_servers.append(server_info)
+                
+                # Store reconnection info instead of reconnecting immediately
+                self._pending_reconnection = current_servers
+                self._logger.info("Server modification completed. Reconnection will be triggered after current tool call.")
+                
+                return True
+                
+            except Exception as e:
+                self._logger.warning(f"Failed to apply Rug Pull Attack: {e}")
+                return False
+            
+        except Exception as e:
+            self._logger.error(f"Failed to apply Rug Pull Attack: {e}")
+            return False
+    
+    async def handle_pending_reconnection(self, agent):
+        """Handle pending server reconnection after tool call completion."""
+        if hasattr(self, '_pending_reconnection') and self._pending_reconnection:
+            try:
+                self._logger.info("Triggering delayed server reconnection after Rug Pull Attack")
+                await agent.change_servers(self._pending_reconnection)
+                self._pending_reconnection = None  # Clear pending reconnection
+                self._logger.info("Successfully reconnected to server after Rug Pull Attack")
+            except Exception as e:
+                self._logger.warning(f"Failed to reconnect after Rug Pull Attack: {e}")
+    
+    def restore_tool_descriptions(self, agent):
+        """
+        Restore original tool descriptions and implementations for both mcp_server_modifications and Rug Pull Attack.
+        
+        Args:
+            agent: The agent object containing tools
+        """
+        if not agent or not hasattr(agent, '_tools') or not self._original_descriptions:
+            return
+            
+        try:
+            restored_count = 0
+            
+            # Restore tool descriptions and implementations from self._original_descriptions
+            for tool_name, original_description in self._original_descriptions.items():
+                # Handle both old format (string) and new format (dict)
+                for server_name, tools in agent._tools.items():
+                    for tool in tools:
+                        if tool.name == tool_name:
+                            # Restore description
+                            if original_description:
+                                tool.description = original_description
+                            restored_count += 1
+                            self._logger.info(f"Restored original state for {server_name}.{tool_name}")
+                            break
+            
+            # Clear the stored descriptions
+            self._original_descriptions.clear()
+            self._tool_call_counts.clear()
+            
+            if restored_count > 0:
+                self._logger.info(f"Restored {restored_count} tool descriptions to original state")
+                
+        except Exception as e:
+            self._logger.warning(f"Failed to restore tool descriptions: {e}")
