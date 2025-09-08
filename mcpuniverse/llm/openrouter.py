@@ -59,6 +59,46 @@ class OpenRouterModel(BaseLLM):
     def __init__(self, config: Optional[Union[Dict, str]] = None):
         super().__init__()
         self.config = OpenRouterModel.config_class.load(config)
+        self.total_cost = 0.0  # 跟踪总费用
+        
+        # 模型定价表 (价格每1K tokens)
+        self.model_pricing = {
+            # 最新模型价格
+            "z-ai/glm-4.5v": {"input": 0.0005, "output": 0.0018},
+            "moonshotai/kimi-k2": {"input": 0.00014, "output": 0.00249},
+            "qwen/qwen3-235b-a22b": {"input": 0.00013, "output": 0.0006},
+            "deepseek/deepseek-chat-v3.1": {"input": 0.0002, "output": 0.0008},
+            "google/gemini-2.5-flash": {"input": 0.0003, "output": 0.0025},
+            "x-ai/grok-4": {"input": 0.003, "output": 0.015},
+            "google/gemini-2.5-pro": {"input": 0.00125, "output": 0.01},
+            "openai/gpt-4.1": {"input": 0.002, "output": 0.008},
+            
+            # 其他常用模型
+            "openai/gpt-4o": {"input": 0.0025, "output": 0.01},
+            "openai/gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+            "anthropic/claude-3.5-sonnet": {"input": 0.003, "output": 0.015},
+            "meta-llama/llama-3.1-8b-instruct": {"input": 0.00018, "output": 0.00018},
+            "meta-llama/llama-3.1-70b-instruct": {"input": 0.00088, "output": 0.00088},
+            "meta-llama/llama-3.1-405b-instruct": {"input": 0.003, "output": 0.003},
+            "cohere/command-r-plus": {"input": 0.003, "output": 0.015},
+            "mistralai/mixtral-8x7b-instruct": {"input": 0.00024, "output": 0.00024},
+            "microsoft/wizardlm-2-8x22b": {"input": 0.00063, "output": 0.00063},
+        }
+
+    def _calculate_cost(self, usage, model_name):
+        """计算费用"""
+        if usage is None:
+            return 0.0
+        
+        pricing = self.model_pricing.get(model_name, {"input": 0.001, "output": 0.002})
+        
+        prompt_tokens = usage.prompt_tokens if hasattr(usage, 'prompt_tokens') else 0
+        completion_tokens = usage.completion_tokens if hasattr(usage, 'completion_tokens') else 0
+        
+        # 计算费用 (价格是每1K tokens)
+        cost = (prompt_tokens / 1000 * pricing["input"]) + (completion_tokens / 1000 * pricing["output"])
+        
+        return cost
 
     def _generate(
             self,
@@ -98,6 +138,14 @@ class OpenRouterModel(BaseLLM):
                 seed=self.config.seed,
                 **kwargs
             )
+            
+            # 计算费用
+            cost = self._calculate_cost(chat.usage, self.config.model_name)
+            self.total_cost += cost
+            
+            # 显示费用信息
+            print(f"本次调用费用: ${cost:.6f} | 总费用: ${self.total_cost:.6f}")
+            
             return chat.choices[0].message.content
 
         chat = client.beta.chat.completions.parse(
@@ -112,7 +160,23 @@ class OpenRouterModel(BaseLLM):
             response_format=response_format,
             **kwargs
         )
+        
+        # 计算费用
+        cost = self._calculate_cost(chat.usage, self.config.model_name)
+        self.total_cost += cost
+        
+        # 显示费用信息
+        print(f"本次调用费用: ${cost:.6f} | 总费用: ${self.total_cost:.6f}")
+        
         return chat.choices[0].message.parsed
+
+    def get_total_cost(self):
+        """获取总费用"""
+        return self.total_cost
+    
+    def reset_cost(self):
+        """重置费用计数"""
+        self.total_cost = 0.0
 
     def set_context(self, context: Context):
         """
