@@ -349,7 +349,7 @@ class MCPClient(metaclass=AutodocABCMeta):
                     tracer.add({
                         "type": "tool",
                         "class": "MCPClient",
-                        "server": "yfinance",  # Could be made configurable
+                        "server": "yfinance",  
                         "tool_name": tool_name,
                         "arguments": arguments,
                         "response": result.model_dump(mode="json") if hasattr(result, 'model_dump') else result,

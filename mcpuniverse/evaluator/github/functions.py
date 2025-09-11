@@ -13,11 +13,44 @@ from mcpuniverse.mcp.manager import MCPManager
 ##################################################################################
 # Utils Function for Github
 ##################################################################################
+
+def _parse_mcp_output(output):
+    """Parse MCP output and return the JSON data"""
+    if isinstance(output, dict) and 'error' in output:
+        return None
+    if hasattr(output, 'isError') and output.isError:
+        return None
+    
+    if isinstance(output, dict) and 'result' in output:
+        result = output['result']
+        if hasattr(result, 'content') and len(result.content) > 0:
+            content = result.content[0]
+            if hasattr(content, 'text'):
+                try:
+                    return json.loads(content.text)
+                except json.JSONDecodeError:
+                    return None
+    elif isinstance(output, list) and len(output) > 0:
+        content = output[0]
+        if hasattr(content, 'text'):
+            try:
+                return json.loads(content.text)
+            except json.JSONDecodeError:
+                return None
+    elif hasattr(output, 'content') and len(output.content) > 0:
+        content = output.content[0]
+        if hasattr(content, 'text'):
+            try:
+                return json.loads(content.text)
+            except json.JSONDecodeError:
+                return None
+    
+    return None
 async def github__check_repository(query: str, **kwargs):
     """Check whether a Github repository exists."""
     manager = MCPManager(context=kwargs.get("context", None))
 
-    # search repositories in github MCP might be crashed, so we need to catch the error
+    # First try search repositories
     try:
         output = await manager.execute(
             server_name="github",
@@ -25,13 +58,43 @@ async def github__check_repository(query: str, **kwargs):
             arguments={"query": query},
             transport="stdio"
         )
+        result = _parse_mcp_output(output)
+        if result and result.get('total_count', 0) > 0:
+            return result
     except Exception as e:
         print(f"Error searching repositories: {e}")
-        return None
-    if output.isError:
-        return None
-    json_obj = json.loads(output.content[0].text)
-    return json_obj
+    
+    # If search failed or returned no results, try to check if it's a specific repo
+    # by attempting to access a common file (README)
+    if '/' in query and len(query.split('/')) == 2:
+        owner, repo = query.split('/', 1)
+        try:
+            # Try to get a common file to verify the repo exists
+            file_output = await manager.execute(
+                server_name="github",
+                tool_name="get_file_contents",
+                arguments={"owner": owner, "repo": repo, "path": "README"},
+                transport="stdio"
+            )
+            file_result = _parse_mcp_output(file_output)
+            if file_result and file_result.get('name'):
+                # Repository exists, return a mock search result
+                return {
+                    "total_count": 1,
+                    "repositories": [{
+                        "full_name": query,
+                        "name": repo,
+                        "owner": {"login": owner},
+                        "description": "Repository found via file check",
+                        "html_url": f"https://github.com/{query}",
+                        "private": False,
+                        "fork": False
+                    }]
+                }
+        except Exception as e:
+            print(f"Error checking repository via file: {e}")
+    
+    return None
 
 
 async def github__get_file_contents(owner: str, repo: str, path: str, branch: Optional[str] = None, **kwargs):
@@ -56,9 +119,11 @@ async def github__get_file_contents(owner: str, repo: str, path: str, branch: Op
     except Exception as e:
         print(f"Error getting file contents: {e}")
         return None
-    if output.isError:
-        return None
-    return output.content[1].resource.text
+    
+    data = _parse_mcp_output(output)
+    if data:
+        return data.get('content', '')
+    return None
 
 async def github__list_branches(owner: str, repo: str, **kwargs):
     """List the branches of a repository."""
@@ -79,10 +144,8 @@ async def github__list_branches(owner: str, repo: str, **kwargs):
     except Exception as e:
         print(f"Error listing branches: {e}")
         return None
-    if output.isError:
-        return None
-    json_obj = json.loads(output.content[0].text)
-    return json_obj
+    
+    return _parse_mcp_output(output)
 
 async def github__list_pull_requests(owner: str, repo: str, base: str, head: str, **kwargs) -> Optional[List]:
     """List the PRs from head to base."""
@@ -105,10 +168,8 @@ async def github__list_pull_requests(owner: str, repo: str, base: str, head: str
     except Exception as e:
         print(f"Error listing pull requests: {e}")
         return None
-    if output.isError:
-        return None
-    json_obj = json.loads(output.content[0].text)
-    return json_obj
+    
+    return _parse_mcp_output(output)
 
 
 async def github__list_issues(owner: str, repo: str,
@@ -119,7 +180,7 @@ async def github__list_issues(owner: str, repo: str,
     args = {
         "owner": owner,
         "repo": repo,
-        "perPage": 100
+        "per_page": 100
     }
     if state:
         args["state"] = state
@@ -144,9 +205,10 @@ async def github__list_issues(owner: str, repo: str,
             except Exception as e:
                 print(f"Error listing issues: {e}")
                 return None
-            if output.isError:
+            
+            current_page_json = _parse_mcp_output(output)
+            if current_page_json is None:
                 return None
-            current_page_json = json.loads(output.content[0].text)
             if len(current_page_json) == 0:
                 break
             json_obj.extend(current_page_json)
@@ -177,10 +239,8 @@ async def github__get_issue_comments(owner: str, repo: str, issue_number: int, *
     except Exception as e:
         print(f"Error getting issue comments: {e}")
         return None
-    if output.isError:
-        return None
-    json_obj = json.loads(output.content[0].text)
-    return json_obj
+    
+    return _parse_mcp_output(output)
 
 
 ##################################################################################
@@ -190,12 +250,16 @@ async def github__get_issue_comments(owner: str, repo: str, issue_number: int, *
 @compare_func(name="github.check_repository")
 async def github_check_repository(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check whether a Github repository exists."""
-    _, query = args
+    if len(args) >= 2:
+        _, query = args
+    else:
+        query = args[0] if args else ""
     repos = await github__check_repository(query, **kwargs)
     if repos is None or repos['total_count'] == 0:
         return False, "the repository doesn't exist"
 
-    full_names = [repo['full_name'] for repo in repos['items']]
+    items = repos.get('items', repos.get('repositories', []))
+    full_names = [repo['full_name'] for repo in items]
     if query in full_names:
         return True, ""
     return False, "the repository doesn't exist"
@@ -204,11 +268,39 @@ async def github_check_repository(x: dict, *args, **kwargs) -> Tuple[bool, str]:
 @compare_func(name="github.check_branches_exist")
 async def github_check_branches_exist(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check whether branches exists."""
-    _, op_args = args
-    branches = await github__list_branches(op_args['owner'], op_args['repo'], **kwargs)
-    if branches is None:
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        _, op_args = args[0]
+    elif len(args) >= 2:
+        _, op_args = args
+    else:
+        op_args = args[0] if args else {}
+    
+    branches_data = await github__list_branches(op_args['owner'], op_args['repo'], **kwargs)
+    if branches_data is None:
         return False, "the branches don't exist"
-    branches_name = [branch['name'] for branch in branches]
+    
+    # Parse the branches data if it's a string
+    if isinstance(branches_data, str):
+        try:
+            branches_data = json.loads(branches_data)
+        except json.JSONDecodeError:
+            return False, "failed to parse branches data"
+    
+    # Extract branches list from the response
+    if isinstance(branches_data, dict) and 'branches' in branches_data:
+        branches = branches_data['branches']
+    elif isinstance(branches_data, list):
+        branches = branches_data
+    else:
+        return False, "invalid branches data format"
+    
+    # Extract branch names
+    if isinstance(branches, list):
+        branches_name = [branch['name'] for branch in branches if isinstance(branch, dict) and 'name' in branch]
+    else:
+        return False, "invalid branches data format"
+    
     for branch in op_args['branches']:
         if branch not in branches_name:
             return False, f"the branch {branch} doesn't exist"
@@ -218,7 +310,11 @@ async def github_check_branches_exist(x: dict, *args, **kwargs) -> Tuple[bool, s
 @compare_func(name="github.check_file_content")
 async def github_check_file_content(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if file content is valid."""
-    value, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        value, op_args = args[0]
+    else:
+        value, op_args = args
 
     resp = await github__get_file_contents(
             op_args['owner'], op_args['repo'], op_args['path'], op_args['branch'], **kwargs)
@@ -243,7 +339,14 @@ async def github_check_file_content(x: dict, *args, **kwargs) -> Tuple[bool, str
 @compare_func(name="github.check_file_not_exist")
 async def github_check_file_not_exist(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if file does not exist."""
-    _, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        _, op_args = args[0]
+    elif len(args) >= 2:
+        _, op_args = args
+    else:
+        op_args = args[0] if args else {}
+    
     resp = await github__get_file_contents(op_args['owner'], op_args['repo'],
                                            op_args['path'], op_args['branch'], **kwargs)
     if resp:
@@ -254,7 +357,14 @@ async def github_check_file_not_exist(x: dict, *args, **kwargs) -> Tuple[bool, s
 @compare_func(name="github.check_file_exist")
 async def github_check_file_exist(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if file exists."""
-    _, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        _, op_args = args[0]
+    elif len(args) >= 2:
+        _, op_args = args
+    else:
+        op_args = args[0] if args else {}
+    
     resp = await github__get_file_contents(op_args['owner'], op_args['repo'],
                                            op_args['path'], op_args['branch'], **kwargs)
     if not resp:
@@ -265,7 +375,14 @@ async def github_check_file_exist(x: dict, *args, **kwargs) -> Tuple[bool, str]:
 @compare_func(name="github.check_pull_request")
 async def github_check_pull_request(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if PRs are valid."""
-    _, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        _, op_args = args[0]
+    elif len(args) >= 2:
+        _, op_args = args
+    else:
+        op_args = args[0] if args else {}
+    
     prs = await github__list_pull_requests(
         op_args['owner'], op_args['repo'], op_args['base'], op_args['head'], **kwargs)
 
@@ -350,7 +467,11 @@ async def github_check_file_content_and_issue_count(x: dict, *args, **kwargs) ->
 @compare_func(name="github.file_content_include")
 async def github_file_content_include(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if file content include some strings."""
-    value, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        value, op_args = args[0]
+    else:
+        value, op_args = args
     resp = await github__get_file_contents(
         op_args['owner'], op_args['repo'], op_args['path'], op_args['branch'], **kwargs)
     file_path = f"{op_args['owner']}/{op_args['repo']}/{op_args['branch']}/{op_args['path']}"
@@ -367,7 +488,14 @@ async def github_file_content_include(x: dict, *args, **kwargs) -> Tuple[bool, s
 @compare_func(name="github.check_repository_with_fewest_issues")
 async def github_check_repository_with_fewest_issues(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if file content is valid and the number of issues is the fewest."""
-    _, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        _, op_args = args[0]
+    elif len(args) >= 2:
+        _, op_args = args
+    else:
+        op_args = args[0] if args else {}
+    
     repos = op_args['repos']
     owner = op_args['owner']
     # find the repo with the fewest issues
@@ -394,7 +522,14 @@ async def github_check_repository_with_fewest_issues(x: dict, *args, **kwargs) -
 @compare_func(name="github.check_file_content_with_fewest_issues")
 async def github_check_file_content_with_fewest_issues(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check if file content is valid and the number of issues is the fewest."""
-    _, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        _, op_args = args[0]
+    elif len(args) >= 2:
+        _, op_args = args
+    else:
+        op_args = args[0] if args else {}
+    
     repos = op_args['repos']
     owner = op_args['owner']
     # find the repo with the fewest issues
@@ -447,7 +582,12 @@ async def github_check_number_of_issues(x: dict, *args, **kwargs) -> Tuple[bool,
                 return False
         return True
 
-    value, op_args = args
+    # Handle the case where args[0] is a tuple containing the actual arguments
+    if args and isinstance(args[0], tuple) and len(args[0]) >= 2:
+        value, op_args = args[0]
+    else:
+        value, op_args = args
+    
     title = op_args.get('title', None)
     labels = op_args.get('labels', None)
     state = op_args.get('state', None)

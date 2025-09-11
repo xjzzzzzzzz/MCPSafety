@@ -44,7 +44,7 @@ correct: Answer 'yes' if extracted_final_answer matches the [correct_answer] giv
 
 def google_search__call_gpt(
         prompt: str,
-        model: str = "gpt-4.1",
+        model: str = "qwen-max-0428",
         temperature: float = 0.0,
         **kwargs
 ) -> str:
@@ -52,7 +52,7 @@ def google_search__call_gpt(
     Call GPT to get a response to a prompt.
     """
     context: Context = kwargs.get("context", Context())
-    client = OpenAI(api_key=context.get_env("OPENAI_API_KEY"))
+    client = OpenAI(api_key=context.get_env("QWEN_API_KEY"),base_url="https://dashscope.aliyuncs.com/compatible-mode/v1")
     response = None
     attempt = 5
     while attempt > 0:

@@ -44,6 +44,9 @@
     "mcp_servers": [
         {
             "name": "google-maps"
+        },
+        {
+            "name": "fetch"
         }
     ],
     "evaluators": [

@@ -156,9 +156,6 @@
         "-m",
         "mcpuniverse.mcp.servers.github"
       ]
-    },
-    "env": {
-      "GITHUB_PERSONAL_ACCESS_TOKEN": "{{GITHUB_PERSONAL_ACCESS_TOKEN}}"
     }
   },
   "google-sheets": {
@@ -270,11 +267,10 @@
   },
   "playwright": {
     "stdio": {
-      "command": "npx",
+      "command": "python",
       "args": [
-        "@playwright/mcp@latest",
-        "--headless",
-        "--isolated"
+        "-m",
+        "mcpuniverse.mcp.servers.playwright"
       ]
     }
   },

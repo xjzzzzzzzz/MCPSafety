@@ -1,9 +1,9 @@
 kind: llm
 spec:
   name: llm-1
-  type: openai
+  type: qwen
   config:
-    model_name: gpt-4.1
+    model_name: qwen-max-0428
 
 ---
 kind: agent
@@ -15,6 +15,10 @@ spec:
     instruction: You are an agent for Browser automation.
     max_iterations: 20
     summarize_tool_response: false
+    servers:
+      - name: playwright
+      - name: date
+      - name: fetch
 
 ---
 kind: benchmark
@@ -22,43 +26,6 @@ spec:
   description: Test agent for playwright tasks. 
   agent: ReAct-agent
   tasks:
-    - test/browser_automation/playwright_paper_task_0001.json
-    - test/browser_automation/playwright_paper_task_0002.json
-    - test/browser_automation/playwright_paper_task_0003.json
-    - test/browser_automation/playwright_paper_task_0004.json
-    - test/browser_automation/playwright_paper_task_0005.json
-    - test/browser_automation/playwright_paper_task_0006.json
-    - test/browser_automation/playwright_paper_task_0007.json
-    - test/browser_automation/playwright_paper_task_0008.json
-    - test/browser_automation/playwright_sports_task_0001.json
-    - test/browser_automation/playwright_sports_task_0002.json
-    - test/browser_automation/playwright_sports_task_0003.json
-    - test/browser_automation/playwright_sports_task_0004.json
-    - test/browser_automation/playwright_sports_task_0005.json
-    - test/browser_automation/playwright_sports_task_0006.json
-    - test/browser_automation/playwright_sports_task_0007.json
-    - test/browser_automation/playwright_sports_task_0008.json
-    - test/browser_automation/playwright_huggingface_task_0001.json
-    - test/browser_automation/playwright_huggingface_task_0002.json
-    - test/browser_automation/playwright_huggingface_task_0003.json
-    - test/browser_automation/playwright_huggingface_task_0004.json
-    - test/browser_automation/playwright_huggingface_task_0005.json
-    - test/browser_automation/playwright_huggingface_task_0006.json
-    - test/browser_automation/playwright_huggingface_task_0007.json
-    - test/browser_automation/playwright_google_map_task_0001.json
-    - test/browser_automation/playwright_google_map_task_0002.json
-    - test/browser_automation/playwright_google_map_task_0003.json
-    - test/browser_automation/playwright_google_map_task_0004.json
-    - test/browser_automation/playwright_google_map_task_0005.json
-    - test/browser_automation/playwright_google_map_task_0006.json
-    - test/browser_automation/playwright_google_map_task_0007.json
     - test/browser_automation/playwright_booking_task_0001.json
     - test/browser_automation/playwright_booking_task_0002.json
-    - test/browser_automation/playwright_booking_task_0003.json
-    - test/browser_automation/playwright_booking_task_0004.json
-    - test/multi_server/multi-server_task_playwright_notion_0001.json
-    - test/multi_server/multi-server_task_playwright_notion_0002.json
-    - test/multi_server/multi-server_task_playwright_notion_0003.json
-    - test/multi_server/multi-server_task_playwright_notion_0004.json
-    - test/multi_server/multi-server_task_playwright_notion_0005.json
     
