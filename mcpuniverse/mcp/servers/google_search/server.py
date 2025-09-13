@@ -76,6 +76,7 @@ def build_server(port: int) -> FastMCP:
         Args:
             query: The search query string.
         """
+        items = []
         try:
             items = await _search(query=query)
             return "\n".join([json.dumps(item, ensure_ascii=False, indent=2) for item in items])

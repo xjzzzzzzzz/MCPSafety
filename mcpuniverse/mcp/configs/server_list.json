@@ -287,5 +287,14 @@
         "https://mcp.paypal.com/sse"
       ]
     }
+  },
+  "chroma": {
+    "stdio": {
+      "command": "python",
+      "args": [
+        "-m",
+        "mcpuniverse.mcp.servers.chroma"
+      ]
+    }
   }
 }

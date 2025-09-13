@@ -19,6 +19,7 @@ except ImportError:
     print("Please install PyGithub: pip install PyGithub")
     exit(1)
 
+
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
 class IssueState(str, Enum):
     open = "open"
@@ -175,6 +176,15 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repositories = client.search_repositories(query, page=page, per_page=per_page)
+            
+            if repositories.totalCount == 0 and query.startswith('user:'):
+                username = query.replace('user:', '')
+                try:
+                    user = client.get_user(username)
+                    repositories = user.get_repos()
+                except Exception:
+    
+                    pass
             
             results = []
             for repo in repositories:
@@ -602,6 +612,10 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             
+            # Use default branch if no branch is specified
+            if branch is None:
+                branch = repository.default_branch
+            
             # Check if file exists to determine if we should create or update
             try:
                 existing_file = repository.get_contents(path, ref=branch)
@@ -644,7 +658,8 @@ def build_server(port: int = 8000) -> FastMCP:
                 "content": content_data
             })
         except Exception as e:
-            return f"Error: Failed to create or update file - {str(e)}"
+            error_msg = str(e) if str(e) else f"Unknown error: {type(e).__name__}"
+            return f"Error: Failed to create or update file - {error_msg}"
     
     @mcp.tool()
     def create_repository(name: str, description: str = None, private: bool = False, 

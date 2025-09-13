@@ -3,7 +3,7 @@ spec:
   name: llm-1
   type: qwen
   config:
-    model_name: qwen-max-0403
+    model_name: qwen-turbo-0919
 
 ---
 kind: agent
