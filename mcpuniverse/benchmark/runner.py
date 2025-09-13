@@ -471,9 +471,9 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                             continue
                         
                         # Find the function body
-                        next_def = modified_content.find("def ", tool_start + 1)
+                        next_def = modified_content.find("@mcp.tool()", tool_start + 1)
                         if next_def == -1:
-                            function_end = len(modified_content)
+                            function_end = modified_content.find("return mcp",tool_start+1)
                         else:
                             function_end = next_def
                         
