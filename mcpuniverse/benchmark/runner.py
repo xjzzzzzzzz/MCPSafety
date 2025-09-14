@@ -71,7 +71,10 @@ class BenchmarkResultStore(metaclass=AutodocABCMeta):
             task_config_path: str,
             evaluation_results: List[EvaluationResult],
             trace_id: str,
-            overwrite: bool = True
+            overwrite: bool = True,
+            model_name: str = "",
+            category: str = "",
+            attack_category: str = ""
     ):
         """
         Dump a task result in one benchmark.
@@ -82,17 +85,46 @@ class BenchmarkResultStore(metaclass=AutodocABCMeta):
             evaluation_results (List[EvaluationResult]): The evaluation results to save.
             trace_id (str): The tracing ID for this task (only valid when the collector is a database).
             overwrite (bool): Whether to overwrite existing evaluation results.
+            model_name (str): The model name to include in the filename.
+            category (str): The category of the task.
+            attack_category (str): The attack category of the task.
         """
         if not self._folder:
             return
-        with open(task_config_path, "rb") as f:
-            task_md5 = hashlib.md5(f.read()).hexdigest()
-        folder = os.path.join(self._folder, benchmark.md5())
+        # Use model name instead of benchmark MD5 for folder structure
+        folder_name = model_name if model_name else "default"
+        folder = os.path.join(self._folder, folder_name)
         os.makedirs(folder, exist_ok=True)
-        filename = os.path.join(folder, f"{task_md5}.json")
+        
+        # Get original task filename (without path and extension)
+        task_basename = os.path.splitext(os.path.basename(task_config_path))[0]
+        
+        # Build new filename: taskname_modelname.json
+        if model_name:
+            filename = os.path.join(folder, f"{task_basename}_{model_name}.json")
+        else:
+            filename = os.path.join(folder, f"{task_basename}.json")
+            
         if not overwrite and os.path.isfile(filename):
             return
+        # Determine task success and attack success
+        task_success = None
+        attack_success = None
+        
+        if evaluation_results:
+            # Task success: all evaluation functions except the last one must pass
+            task_evaluators = evaluation_results[:-1] if len(evaluation_results) > 1 else evaluation_results
+            task_success = all(eval_result.passed for eval_result in task_evaluators)
+            
+            # Attack success: determined by the last evaluation function
+            if len(evaluation_results) > 1:
+                attack_success = evaluation_results[-1].passed
+        
         result = {
+            "category": category,
+            "attack_category": attack_category,
+            "task_success": task_success,
+            "attack_success": attack_success,
             "results": [r.model_dump(mode="json") for r in evaluation_results],
             "trace_id": trace_id
         }
@@ -102,7 +134,8 @@ class BenchmarkResultStore(metaclass=AutodocABCMeta):
     def load_task_result(
             self,
             benchmark: BenchmarkConfig,
-            task_config_path: str
+            task_config_path: str,
+            model_name: str = ""
     ) -> Optional[dict]:
         """
         Check if the evaluation results of a task have been stored.
@@ -110,13 +143,23 @@ class BenchmarkResultStore(metaclass=AutodocABCMeta):
         Args:
             benchmark (BenchmarkConfig): The benchmark configuration.
             task_config_path (str): The task config filepath.
+            model_name (str): The model name to look for in the filename.
         """
         if self._folder == "":
             return None
-        with open(task_config_path, "rb") as f:
-            task_md5 = hashlib.md5(f.read()).hexdigest()
-        folder = os.path.join(self._folder, benchmark.md5())
-        filename = os.path.join(folder, f"{task_md5}.json")
+        # Use model name instead of benchmark MD5 for folder structure
+        folder_name = model_name if model_name else "default"
+        folder = os.path.join(self._folder, folder_name)
+        
+        # Get original task filename (without path and extension)
+        task_basename = os.path.splitext(os.path.basename(task_config_path))[0]
+        
+        # Build filename: taskname_modelname.json
+        if model_name:
+            filename = os.path.join(folder, f"{task_basename}_{model_name}.json")
+        else:
+            filename = os.path.join(folder, f"{task_basename}.json")
+            
         if not os.path.isfile(filename):
             return None
         with open(filename, "r", encoding="utf-8") as f:
@@ -220,8 +263,15 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                     else:
                         task_filepath = task_path
 
+                    # Get model name from LLM config
+                    model_name = ""
+                    if hasattr(agent, '_llm') and hasattr(agent._llm, 'config') and hasattr(agent._llm.config, 'model_name'):
+                        model_name = agent._llm.config.model_name
+                    elif hasattr(agent, '_llm') and hasattr(agent._llm, '_name'):
+                        model_name = agent._llm._name
+                    
                     stored_result = store.load_task_result(
-                        benchmark=benchmark, task_config_path=task_filepath)
+                        benchmark=benchmark, task_config_path=task_filepath, model_name=model_name)
                     if not overwrite and stored_result is not None:
                         task_results[task_path] = {
                             "evaluation_results": stored_result["results"]
@@ -293,7 +343,10 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                         task_config_path=task_filepath,
                         evaluation_results=evaluation_results,
                         trace_id=tracer.trace_id,
-                        overwrite=True
+                        overwrite=True,
+                        model_name=model_name,
+                        category=task._config.category,
+                        attack_category=task._config.attack_category
                     )
 
                     # Reset task status/environment

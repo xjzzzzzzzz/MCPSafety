@@ -13,8 +13,13 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
         trace_collector = FileCollector(log_file="log/financial_analysis.log")
         benchmark = BenchmarkRunner("test/financial_analysis.yaml")
 
-        results = await benchmark.run(trace_collector=trace_collector, callbacks=get_vprint_callbacks())
-        
+        results = await benchmark.run(
+            trace_collector=trace_collector, 
+            callbacks=get_vprint_callbacks(),
+            store_folder="results/financial_analysis",  
+            overwrite=False
+        )
+    
         from mcpuniverse.benchmark.report import BenchmarkReport
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()

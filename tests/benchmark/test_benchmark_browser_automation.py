@@ -12,7 +12,12 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
     async def test(self):
         trace_collector = FileCollector(log_file="log/browser_automation.log")
         benchmark = BenchmarkRunner("test/browser_automation.yaml")
-        benchmark_results = await benchmark.run(trace_collector=trace_collector, callbacks=get_vprint_callbacks())
+        benchmark_results = await benchmark.run(
+            trace_collector=trace_collector, 
+            callbacks=get_vprint_callbacks(),
+            store_folder="results/browser_automation",  
+            overwrite=False
+        )
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()
 

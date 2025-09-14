@@ -12,7 +12,12 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
     async def test(self):
         trace_collector = FileCollector(log_file="log/multi_server.log")
         benchmark = BenchmarkRunner("test/multi_server.yaml")
-        benchmark_results = await benchmark.run(trace_collector=trace_collector, callbacks=get_vprint_callbacks())
+        benchmark_results = await benchmark.run(
+            trace_collector=trace_collector, 
+            callbacks=get_vprint_callbacks(),
+            store_folder="results/multi_server",  
+            overwrite=False
+        )
         report = BenchmarkReport(benchmark)
         report.dump()
 

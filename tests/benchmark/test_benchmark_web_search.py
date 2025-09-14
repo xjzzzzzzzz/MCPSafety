@@ -12,7 +12,12 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
     async def test(self):
         trace_collector = FileCollector(log_file="log/web_search.log")
         benchmark = BenchmarkRunner("test/web_search.yaml")
-        results = await benchmark.run(trace_collector=trace_collector, callbacks=get_vprint_callbacks())
+        results = await benchmark.run(
+            trace_collector=trace_collector, 
+            callbacks=get_vprint_callbacks(),
+            store_folder="results/web_search",  
+            overwrite=False
+        )
 
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()

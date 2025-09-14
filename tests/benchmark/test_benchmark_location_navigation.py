@@ -14,7 +14,9 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
         benchmark = BenchmarkRunner("test/location_navigation.yaml")
         benchmark_results = await benchmark.run(
             trace_collector=trace_collector, 
-            callbacks=get_vprint_callbacks()
+            callbacks=get_vprint_callbacks(),
+            store_folder="results/location_navigation",  
+            overwrite=False
         )
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()
