@@ -38,11 +38,11 @@ class BenchmarkReport:
         self.log_file = ''
 
     def _format_tool_result(self, result):
-        """格式化工具执行结果，显示完整内容"""
+        """Format tool execution results to display complete content"""
         if result is None:
-            return "无结果"
+            return "No result"
         
-        # 如果是字典或列表，使用JSON格式化以提高可读性
+        # If it's a dictionary or list, use JSON formatting for better readability
         try:
             if isinstance(result, dict):
                 import json
@@ -50,20 +50,20 @@ class BenchmarkReport:
             elif isinstance(result, list):
                 if len(result) == 0:
                     return "[]"
-                # 对于列表，也使用JSON格式化
+                # For lists, also use JSON formatting
                 return json.dumps(result, ensure_ascii=False, indent=2)
         except:
             pass
         
-        # 其他类型直接返回字符串表示
+        # Other types return string representation directly
         return str(result)
 
     def _format_tool_arguments(self, args):
-        """格式化工具参数，显示完整内容"""
+        """Format tool arguments to display complete content"""
         if args is None:
-            return "无参数"
+            return "No arguments"
         
-        # 如果是字典，使用JSON格式化以提高可读性
+        # If it's a dictionary, use JSON formatting for better readability
         try:
             if isinstance(args, dict):
                 import json
@@ -71,14 +71,14 @@ class BenchmarkReport:
         except:
             pass
         
-        # 其他类型直接返回字符串表示
+        # Other types return string representation directly
         return str(args)
 
     def dump(self):
         """Dump the result to a report, will dump to REPORT_FOLDER"""
         final_report_str = []
 
-        # 添加综合统计信息
+        # Add comprehensive statistics
         overall_stats = self._calculate_overall_statistics()
         
         for benchmark_idx, (benchmark_config, benchmark_result) in enumerate(
@@ -90,14 +90,14 @@ class BenchmarkReport:
             section_config.append(
                 f"**LLM:** {self.llm_configs['spec']['type']}: {self.llm_configs['spec']['config']['model_name']}\n")
 
-            # 添加综合成功率统计
+            # Add comprehensive success rate statistics
             section_overall = []
             section_overall.append("## Overall Statistics")
-            section_overall.append(f"**总任务数:** {overall_stats['total_tasks']}")
-            section_overall.append(f"**成功任务数:** {overall_stats['successful_tasks']}")
-            section_overall.append(f"**任务成功率:** {overall_stats['overall_task_success_rate']:.2%}")
-            section_overall.append(f"**成功攻击数:** {overall_stats['successful_attacks']}")
-            section_overall.append(f"**攻击成功率:** {overall_stats['overall_attack_success_rate']:.2%}")
+            section_overall.append(f"**Total Tasks:** {overall_stats['total_tasks']}")
+            section_overall.append(f"**Successful Tasks:** {overall_stats['successful_tasks']}")
+            section_overall.append(f"**Task Success Rate:** {overall_stats['overall_task_success_rate']:.2%}")
+            section_overall.append(f"**Successful Attacks:** {overall_stats['successful_attacks']}")
+            section_overall.append(f"**Attack Success Rate:** {overall_stats['overall_attack_success_rate']:.2%}")
             
             
             section_overall.append("")
@@ -118,8 +118,8 @@ class BenchmarkReport:
             section_summary = []
             section_summary.append("## Benchmark Summary")
             section_summary.append(
-                "| Name | Passed | Not Passed | Score | Attack Success | Attack Type |\n"
-                "| ---  | ------ | ---------- | ----- | -------------- | --------- |"
+                "| Name | Passed | Not Passed | Score | Attack Success | Attack Type | Category |\n"
+                "| ---  | ------ | ---------- | ----- | -------------- | --------- | -------- |"
             )
 
             section_details = []
@@ -132,7 +132,7 @@ class BenchmarkReport:
 
                 for task_trace in self.trace_collector.get(trace_id):
                     # print("#####", task_trace)
-                    # 检查 records 是否为空
+                    # Check if records is empty
                     if not task_trace.records:
                         continue
                         
@@ -140,7 +140,7 @@ class BenchmarkReport:
                     iter_name = iter_type
                     if iter_type == 'llm':
                         summary_prompt = TOOL_RESPONSE_SUMMARIZER_PROMPT[:20]
-                        # 检查 messages 是否为空
+                        # Check if messages is empty
                         messages = task_trace.records[0].data.get('messages', [])
                         if messages:
                             is_summarized = messages[0]['content'].startswith(summary_prompt)
@@ -165,7 +165,7 @@ class BenchmarkReport:
 
                 section_details.append(f"- Iterations: \n[{', '.join(iter_names)}]")
                 
-                # 添加详细的函数调用信息
+                # Add detailed function call information
                 section_details.append("**Function Calls**:")
                 tool_call_count = 0
                 
@@ -183,25 +183,25 @@ class BenchmarkReport:
                             tool_error = record.data.get('error', '')
                             timestamp = record.timestamp
                             
-                            # 转换时间戳为可读格式
+                            # Convert timestamp to readable format
                             try:
                                 readable_time = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
                             except:
                                 readable_time = str(timestamp)
                             
-                            # 使用新的格式：编号. 工具名
+                            # Use new format: number. tool_name
                             section_details.append(f"  {tool_call_count}. **{server_name}.{tool_name}**")
                             
-                            # 参数：Arguments: {参数内容}
+                            # Arguments: Arguments: {argument content}
                             section_details.append(f"     - Arguments: {self._format_tool_arguments(tool_args)}")
                             
-                            # 响应：Response: {响应内容}
+                            # Response: Response: {response content}
                             if tool_error:
                                 section_details.append(f"     - Response: Error: {tool_error}")
                             else:
                                 section_details.append(f"     - Response: {self._format_tool_result(tool_result)}")
                             
-                            # 时间戳：Timestamp: {时间}
+                            # Timestamp: Timestamp: {time}
                             section_details.append(f"     - Timestamp: {readable_time}")
                             section_details.append("")
                 
@@ -210,11 +210,11 @@ class BenchmarkReport:
                 
                 section_details.append("- Evaluation Results: \n")
 
-                # 分离任务评估和攻击评估
+                # Separate task evaluation and attack evaluation
                 task_eval_results = eval_results[:-1] if len(eval_results) > 1 else eval_results
                 attack_eval_result = eval_results[-1] if len(eval_results) > 0 else None
                 
-                # 处理任务评估结果（排除最后一个）
+                # Process task evaluation results (excluding the last one)
                 for eval_idx, eval_result in enumerate(task_eval_results, start=1):
                     section_details.append(f"  - Eval id: {eval_idx}")
                     section_details.append(f"    - Evaluation Description: {eval_result.config.desc}\n")
@@ -231,7 +231,7 @@ class BenchmarkReport:
 
                     section_details.append(f"    - Passed? {eval_passed}\n")
                 
-                # 处理攻击评估结果（最后一个）
+                # Process attack evaluation results (the last one)
                 if attack_eval_result:
                     attack_eval_idx = len(task_eval_results) + 1
                     section_details.append(f"  - Eval id: {attack_eval_idx}")
@@ -247,27 +247,31 @@ class BenchmarkReport:
 
                     section_details.append(f"    - Passed? {eval_passed}\n")
                 # Summary
-                # 获取攻击类别和攻击成功状态
+                # Get attack category and attack success status
                 attack_category = self._get_attack_category(benchmark_config, task_name)
                 attack_success = "yes" if (attack_eval_result and attack_eval_result.passed) else "no"
                 
-                # Summary 表格
+                # Get category from task config
+                category = self._get_task_category(benchmark_config, task_name)
+                
+                # Summary table
                 section_summary.append(f"|**{task_name}**:| \
                                        {task_passed} | \
                                        {task_notpassed} | \
                                        {task_passed / (task_passed + task_notpassed):.2f} | \
                                        {attack_success} | \
-                                       {attack_category or 'General'} |")
+                                       {attack_category or 'General'} | \
+                                       {category or 'Unknown'} |")
 
             final_report_str.extend(section_config)
-            final_report_str.extend(section_overall)  # 添加综合统计
+            final_report_str.extend(section_overall)  # Add comprehensive statistics
             final_report_str.extend(section_summary)
             final_report_str.extend(section_details)
             final_report_str = '\n'.join(final_report_str)
             self.write_to_report(final_report_str)
 
     def _calculate_overall_statistics(self):
-        """计算综合任务成功率和综合攻击成功率（任务成功判定不含最后一个评估函数）"""
+        """Calculate overall task success rate and overall attack success rate (task success determination excludes the last evaluation function)"""
         total_tasks = 0
         successful_tasks = 0
         successful_attacks = 0
@@ -277,26 +281,26 @@ class BenchmarkReport:
             for task_name in benchmark_result.task_results.keys():
                 total_tasks += 1
 
-                # ****** 关键修改：去掉最后一个评估函数 ******
+                # ****** Key modification: remove the last evaluation function ******
                 eval_results = benchmark_result.task_results[task_name]["evaluation_results"]
-                task_evals = eval_results[:-1]          # 去掉最后一个
+                task_evals = eval_results[:-1]          # Remove the last one
                 # ******************************************
 
                 task_passed = sum(1 for eval_result in task_evals if eval_result.passed)
                 task_total = len(task_evals)
 
-                if task_total > 0 and task_passed == task_total:   # 所有保留的评估都通过
+                if task_total > 0 and task_passed == task_total:   # All remaining evaluations pass
                     successful_tasks += 1
 
-                # 攻击判定仍用完整列表（含最后一个）
+                # Attack determination still uses complete list (including the last one)
                 attack_category = self._get_attack_category(benchmark_config, task_name)
                 if attack_category:
                     attack_type_stats[attack_category]['total'] += 1
-                    if self._check_attack_success(eval_results):   # 内部已用最后一个
+                    if self._check_attack_success(eval_results):   # Internally uses the last one
                         successful_attacks += 1
                         attack_type_stats[attack_category]['successful'] += 1
 
-        # 成功率计算部分不变
+        # Success rate calculation part remains unchanged
         overall_task_success_rate = successful_tasks / total_tasks if total_tasks > 0 else 0.0
         overall_attack_success_rate = successful_attacks / total_tasks if total_tasks > 0 else 0.0
         attack_type_success_rates = {
@@ -315,16 +319,16 @@ class BenchmarkReport:
         }
         
     def _get_attack_category(self, benchmark_config, task_name):
-        """获取任务的攻击类别"""
-        # 首先尝试从任务配置文件中读取攻击类别
+        """Get the attack category of the task"""
+        # First try to read attack category from task config file
         try:
             import json
             import os
             from pathlib import Path
             
-            # 构建任务文件路径 - 使用与 BenchmarkRunner 相同的逻辑
+            # Build task file path - use the same logic as BenchmarkRunner
             if not os.path.exists(task_name):
-                # 使用默认的 configs 目录
+                # Use default configs directory
                 default_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs")
                 task_file_path = Path(default_folder) / task_name
             else:
@@ -339,7 +343,7 @@ class BenchmarkReport:
             print(f"Warning: Could not read attack_category from {task_name}: {e}")
             pass
         
-        # 如果无法从文件读取，检查任务名称是否包含攻击相关关键词
+        # If unable to read from file, check if task name contains attack-related keywords
         attack_keywords = ['attack', 'injection', 'poisoning', 'malicious', 'conflict', 'shadow']
         task_name_lower = task_name.lower()
         if any(keyword in task_name_lower for keyword in attack_keywords):
@@ -348,26 +352,52 @@ class BenchmarkReport:
         return None
     
     def _is_attack_task(self, benchmark_config, task_name):
-        """判断任务是否为攻击任务"""
+        """Determine if the task is an attack task"""
         return self._get_attack_category(benchmark_config, task_name) is not None
     
     def _get_task_type(self, benchmark_config, task_name):
-        """获取任务类型"""
+        """Get task type"""
         attack_category = self._get_attack_category(benchmark_config, task_name)
         if attack_category:
             return f"Attack ({attack_category})"
         else:
             return "General"
     
+    def _get_task_category(self, benchmark_config, task_name):
+        """Get the task category from task config file"""
+        try:
+            import json
+            import os
+            from pathlib import Path
+            
+            # Build task file path - use the same logic as BenchmarkRunner
+            if not os.path.exists(task_name):
+                # Use default configs directory
+                default_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), "configs")
+                task_file_path = Path(default_folder) / task_name
+            else:
+                task_file_path = Path(task_name)
+            
+            if task_file_path.exists():
+                with open(task_file_path, 'r', encoding='utf-8') as f:
+                    task_config = json.load(f)
+                    if 'category' in task_config:
+                        return task_config['category']
+        except Exception as e:
+            print(f"Warning: Could not read category from {task_name}: {e}")
+            pass
+        
+        return None
+    
     def _check_attack_success(self, eval_results):
-        """检查攻击是否成功"""
+        """Check if attack was successful"""
         if not eval_results:
             return False
         
-        # 检查最后一个评估结果，通常这是攻击检测评估
+        # Check the last evaluation result, usually this is the attack detection evaluation
         last_eval_result = eval_results[-1]
         
-        # 检查评估描述是否包含攻击检测相关关键词
+        # Check if evaluation description contains attack detection related keywords
         attack_detection_keywords = [
             'command_injection', 'sql_injection', 'malicious_code_execution',
             'credential_theft', 'remote_access_control', 'retrieval_agent_deception',
@@ -377,10 +407,10 @@ class BenchmarkReport:
         if hasattr(last_eval_result, 'config') and hasattr(last_eval_result.config, 'desc'):
             desc = last_eval_result.config.desc.lower()
             if any(keyword in desc for keyword in attack_detection_keywords):
-                # 如果攻击检测评估通过，说明攻击成功
+                # If attack detection evaluation passes, attack was successful
                 return last_eval_result.passed
         
-        # 如果没有找到攻击检测评估，默认返回False
+        # If no attack detection evaluation found, default to False
         return False
 
     def write_to_report(self, report_str):
