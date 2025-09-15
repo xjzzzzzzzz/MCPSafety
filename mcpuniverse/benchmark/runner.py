@@ -92,6 +92,7 @@ class BenchmarkResultStore(metaclass=AutodocABCMeta):
         if not self._folder:
             return
         # Use model name instead of benchmark MD5 for folder structure
+        model_name = model_name.replace("/", "_")
         folder_name = model_name if model_name else "default"
         folder = os.path.join(self._folder, folder_name)
         os.makedirs(folder, exist_ok=True)
