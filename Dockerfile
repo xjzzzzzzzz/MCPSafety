@@ -2,7 +2,11 @@
 FROM python:3.11-slim
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y
+RUN apt-get update && apt-get install -y curl
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
 
 # Install build tools
 RUN apt install -y libpq-dev gcc g++
