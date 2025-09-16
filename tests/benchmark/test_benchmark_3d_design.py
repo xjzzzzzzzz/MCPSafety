@@ -16,7 +16,7 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
             trace_collector=trace_collector, 
             callbacks=get_vprint_callbacks(),
             store_folder="results/3d_design",  
-            overwrite=False
+            overwrite=True  
         )
         print(benchmark_results)
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)

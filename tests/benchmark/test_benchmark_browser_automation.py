@@ -16,7 +16,7 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
             trace_collector=trace_collector, 
             callbacks=get_vprint_callbacks(),
             store_folder="results/browser_automation",  
-            overwrite=False
+            overwrite=True
         )
         report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()

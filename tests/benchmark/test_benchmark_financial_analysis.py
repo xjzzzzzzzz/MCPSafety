@@ -17,7 +17,7 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
             trace_collector=trace_collector, 
             callbacks=get_vprint_callbacks(),
             store_folder="results/financial_analysis",  
-            overwrite=False
+            overwrite=True
         )
     
         from mcpuniverse.benchmark.report import BenchmarkReport

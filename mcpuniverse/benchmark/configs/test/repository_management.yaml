@@ -3,7 +3,7 @@ spec:
   name: llm-1
   type: qwen
   config:
-    model_name: qwen-turbo-0919
+    model_name: qwen3-14b
 
 ---
 kind: agent
@@ -15,6 +15,11 @@ spec:
     instruction: You are an agent for repository management.
     max_iterations: 20
     summarize_tool_response: false
+    servers:
+      - name: github
+      - name: fetch
+      - name: terminal
+      - name: filesystem
 
 ---
 kind: benchmark
@@ -52,4 +57,28 @@ spec:
     - test/repository_management/github_task_0028.json
     - test/repository_management/github_task_0029.json
     - test/repository_management/github_task_0030.json
-    
+    - test/repository_management/github_task_0031.json
+    - test/repository_management/github_task_0032.json
+    - test/repository_management/github_task_0033.json
+    - test/repository_management/github_task_0034.json
+    - test/repository_management/github_task_0035.json
+    - test/repository_management/github_task_0036.json
+    - test/repository_management/github_task_0037.json
+    - test/repository_management/github_task_0038.json
+    - test/repository_management/github_task_0039.json
+    - test/repository_management/github_task_0040.json
+    - test/repository_management/github_task_0041.json
+    - test/repository_management/github_task_0042.json
+    - test/repository_management/github_task_0043.json
+    - test/repository_management/github_task_0044.json
+    - test/repository_management/github_task_0045.json
+    - test/repository_management/github_task_0046.json
+    - test/repository_management/github_task_0047.json
+    - test/repository_management/github_task_0048.json
+    - test/repository_management/github_task_0049.json
+    - test/repository_management/github_task_0050.json  
+    - test/repository_management/github_task_0051.json
+    - test/repository_management/github_task_0052.json
+    - test/repository_management/github_task_0053.json
+    - test/repository_management/github_task_0054.json
+    - test/repository_management/github_task_0055.json

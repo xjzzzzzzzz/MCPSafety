@@ -113,10 +113,10 @@
   },
   "google-maps": {
     "stdio": {
-      "command": "npx",
+      "command": "python",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-google-maps"
+        "-m",
+        "mcpuniverse.mcp.servers.google_maps"
       ]
     },
     "env": {

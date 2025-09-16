@@ -3,7 +3,7 @@ spec:
   name: llm-1
   type: qwen
   config:
-    model_name: qwen3-32b
+    model_name: qwen3-14b
 
 ---
 kind: agent
@@ -20,6 +20,7 @@ spec:
       - name: fetch
       - name: terminal
       - name: filesystem
+      - name: chroma
 
 ---
 kind: benchmark
