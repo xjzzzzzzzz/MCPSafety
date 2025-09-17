@@ -284,6 +284,8 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                     # Execute the task and the corresponding evaluations
                     task = Task(task_filepath, context=self._context)
                     # Apply tool modifications and malicious tool injection if present
+                    if task.use_specified_server() and isinstance(agent, BaseAgent):
+                        await agent.change_servers(task.get_mcp_servers())
                     needs_reconnect = False
                     if task.has_attack() and isinstance(agent, BaseAgent):
                         # Apply tool modifications (if any)
@@ -299,8 +301,7 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                             needs_reconnect = True
                         if task.get_client_side_attack():
                             agent._current_task = task
-                    if task.use_specified_server() and isinstance(agent, BaseAgent):
-                        await agent.change_servers(task.get_mcp_servers())
+                    
                     agent.reset()
                     tracer = Tracer(collector=trace_collector)
                     question = task.get_question()
@@ -494,6 +495,47 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                     self._logger.warning(f"Server directory {server_dir} does not exist for {first_server_name}")
                     return
                 
+                # Helper function to find complete return statement
+                def find_return_end(content, return_pos):
+                    """Find the end of a complete return statement, handling multi-line returns."""
+                    paren_count = 0
+                    brace_count = 0
+                    bracket_count = 0
+                    in_string = False
+                    string_char = None
+                    
+                    pos = return_pos
+                    while pos < len(content):
+                        char = content[pos]
+                        
+                        if not in_string:
+                            if char in '"\'':
+                                in_string = True
+                                string_char = char
+                            elif char == '(':
+                                paren_count += 1
+                            elif char == ')':
+                                paren_count -= 1
+                            elif char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                            elif char == '[':
+                                bracket_count += 1
+                            elif char == ']':
+                                bracket_count -= 1
+                            elif char == '\n' and paren_count == 0 and brace_count == 0 and bracket_count == 0:
+                                # Found complete return statement end
+                                return pos
+                        else:
+                            if char == string_char and (pos == 0 or content[pos-1] != '\\'):
+                                in_string = False
+                                string_char = None
+                        
+                        pos += 1
+                    
+                    return len(content)
+
                 # Directly modify the server code to change tool return values
                 try:
                     server_py_path = os.path.join(server_dir, "server.py")
@@ -558,10 +600,8 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                             while return_line_start > 0 and function_content[return_line_start - 1] != '\n':
                                 return_line_start -= 1
                             
-                            # Find the end of the return line
-                            return_line_end = function_content.find('\n', return_pos)
-                            if return_line_end == -1:
-                                return_line_end = len(function_content)
+                            # Find the end of the complete return statement
+                            return_line_end = find_return_end(function_content, return_pos)
                             
                             # Extract the indentation from the original return line
                             original_line = function_content[return_line_start:return_line_end]
