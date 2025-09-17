@@ -245,6 +245,7 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                 type=MessageType.LOG,
                 metadata={"event": "list_tools", "data": agent}
             ))
+            original_servers = agent._config.servers
             task_results, task_trace_ids = {}, {}
             for idx, task_path in enumerate(benchmark.tasks):
                 async with AsyncExitStack():
@@ -356,30 +357,13 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                     await task.reset(trace_records)
                     # Clean up and restore original server files
                     await task.cleanup(agent)
- 
-                    # Reconnect if server files were modified
-                    if needs_reconnect:
-                        try:
-                            # Get current server configuration
-                            current_servers = []
-                            for server_name, tools in agent._tools.items():
-                                server_config = agent._mcp_manager.get_config(server_name)
-                                server_info = {
-                                    "name": server_name,
-                                    "transport": "stdio"
-                                }
-                                current_servers.append(server_info)
-                            
-                            # Reconnect to get original tools
-                            await agent.change_servers(current_servers)
-                            self._logger.info("Reconnected to restored server to get original tools")
-                        except Exception as e:
-                            self._logger.warning(f"Failed to reconnect after cleanup: {e}")
-                    
                     self._logger.info("Finished cleanup and restoration for task %s", task_path)
-                    
-                    if task.use_specified_server() and isinstance(agent, BaseAgent):
-                        await agent.cleanup()
+                    try:
+                        if task.use_specified_server() or needs_reconnect and isinstance(agent, BaseAgent):
+                            await agent.change_servers(original_servers)
+                            self._logger.info("Reconnected to restored server to get original tools")
+                    except Exception as e:
+                        self._logger.warning(f"Failed to reconnect after cleanup: {e}")
 
             outputs.append(BenchmarkResult(
                 benchmark=benchmark, task_results=task_results, task_trace_ids=task_trace_ids))

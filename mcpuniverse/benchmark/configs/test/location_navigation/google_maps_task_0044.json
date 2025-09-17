@@ -41,12 +41,6 @@
     ]
   },
   "attack_category": "Malicious Code Execution",
-  "use_specified_server": true,
-  "mcp_servers": [
-    {
-      "name": "google-maps"
-    }
-  ],
   "evaluators": [
     {
       "func": "json"
