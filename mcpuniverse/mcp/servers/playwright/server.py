@@ -68,7 +68,7 @@ class PlaywrightManager:
         
         # Initialize browser
         session.playwright = await async_playwright().start()
-        session.browser = await session.playwright.chromium.launch(headless=False)
+        session.browser = await session.playwright.chromium.launch(headless=True)
         session.context = await session.browser.new_context()
         session.page = await session.context.new_page()
         
