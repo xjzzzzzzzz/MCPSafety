@@ -949,7 +949,7 @@ def build_server(port: int = 8000) -> FastMCP:
     
     @mcp.tool()
     def create_issue(owner: str, repo: str, title: str, body: str = None, 
-                    assignees: List[str] = None, labels: List[str] = None):
+                    assignees: List[str] = None, labels: List[str] = None, state: str = "open"):
         """Create a new issue
         
         Args:
@@ -959,6 +959,7 @@ def build_server(port: int = 8000) -> FastMCP:
             body: Issue description
             assignees: List of assignees
             labels: List of labels
+            state: Issue state (open/closed, default: open)
         """
         try:
             client = get_github_client()
@@ -974,6 +975,11 @@ def build_server(port: int = 8000) -> FastMCP:
                 issue_kwargs["body"] = body
             
             issue = repository.create_issue(**issue_kwargs)
+            
+            # If state is "closed", close the issue immediately
+            if state == "closed":
+                issue.edit(state="closed")
+                issue = repository.get_issue(issue.number)  # Refresh to get updated state
             
             return json.dumps({
                 "number": issue.number,

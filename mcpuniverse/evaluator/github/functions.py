@@ -59,7 +59,6 @@ async def github__get_file_contents(owner: str, repo: str, path: str, branch: Op
             transport="stdio"
         )
         output = output["result"]
-        print(f"########output: {output}")
     except Exception as e:
         print(f"Error getting file contents: {e}")
         return None
@@ -331,7 +330,6 @@ async def github_check_file_content_and_issue_count(x: dict, *args, **kwargs) ->
                 assert len(csv_columns) == 2, "the number of columns should be 2"
                 repository_name = row[csv_columns[0]]
                 return_repo_list[repository_name] = int(row[csv_columns[1]])
-            print(f"return_repo_list: {return_repo_list}")
             return return_repo_list
         if file_type == "json":
             return json.loads(file_content)
@@ -402,7 +400,7 @@ async def github_check_repository_with_fewest_issues(x: dict, *args, **kwargs) -
             fewest_issues_count = len(issues)
             fewest_issues_repo_name = repo_name
     repos_check = await github__check_repository(f"repo:{owner}/{fewest_issues_repo_name} fork:true")
-
+    print(f"########repos_check: {repos_check}")
     if repos_check is None or repos_check['total_count'] == 0:
         return False, "the repository doesn't exist"
     full_names = [repo['full_name'] for repo in repos_check['repositories']]
@@ -433,7 +431,7 @@ async def github_check_file_content_with_fewest_issues(x: dict, *args, **kwargs)
     repos_check = await github__check_repository(
         f"repo:{owner}/{fewest_issues_repo_name} fork:true"
     )
-
+    print(f"repos_check: {repos_check}")
     if repos_check is None or repos_check['total_count'] == 0:
         return False, "the repository doesn't exist"
 
@@ -455,10 +453,14 @@ async def github_check_number_of_issues(x: dict, *args, **kwargs) -> Tuple[bool,
 
     async def _filter(issue: dict, condition: dict):
         if "title" in condition and condition["title"] is not None:
+            print(f"issue['title']: {issue['title']}")
+            print(f"condition['title']: {condition['title']}")
             if issue["title"] != condition["title"]:
                 return False
         if "labels" in condition and condition["labels"] is not None:
             labels = [label['name'] for label in issue['labels']]
+            print(f"labels: {labels}")
+            print(f"condition['labels']: {condition['labels']}")
             if not all(ele in labels for ele in condition["labels"]):
                 return False
         if "state" in condition and condition["state"] is not None:
@@ -466,6 +468,8 @@ async def github_check_number_of_issues(x: dict, *args, **kwargs) -> Tuple[bool,
                 return False
         if "comments" in condition and condition["comments"] is not None:
             comments = await github__get_issue_comments(op_args['owner'], op_args['repo'], issue['number'])
+            print(f"comments: {comments}")
+            print(f"condition['comments']: {condition['comments']}")
             if not any(comment['body'] == condition["comments"] for comment in comments):
                 return False
         return True
@@ -481,6 +485,7 @@ async def github_check_number_of_issues(x: dict, *args, **kwargs) -> Tuple[bool,
     issues = await github__list_issues(
         op_args['owner'], op_args['repo'], state=state, labels=labels
     )
+    print(f"######issues_number: {len(issues)}")
     filter_args = {
         "title": title,
         "labels": labels,
