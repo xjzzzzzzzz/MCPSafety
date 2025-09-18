@@ -16,13 +16,17 @@ from mcpuniverse.mcp.manager import MCPManager
 async def github__check_repository(query: str, **kwargs):
     """Check whether a Github repository exists."""
     manager = MCPManager(context=kwargs.get("context", None))
-
+    if '/' in query and not query.startswith(('user:', 'repo:')):
+        owner = query.split('/')[0]
+        search_query = f"user:{owner}"
+    else:
+        search_query = query
     # search repositories in github MCP might be crashed, so we need to catch the error
     try:
         output = await manager.execute(
             server_name="github",
             tool_name="search_repositories",
-            arguments={"query": query},
+            arguments={"query": search_query},
             transport="stdio"
         )
         output = output["result"]
@@ -55,12 +59,13 @@ async def github__get_file_contents(owner: str, repo: str, path: str, branch: Op
             transport="stdio"
         )
         output = output["result"]
+        print(f"########output: {output}")
     except Exception as e:
         print(f"Error getting file contents: {e}")
         return None
     if output.isError:
         return None
-    return output.content[0].text
+    return json.loads(output.content[0].text).get('content', '')
 
 async def github__list_branches(owner: str, repo: str, **kwargs):
     """List the branches of a repository."""
@@ -111,7 +116,7 @@ async def github__list_pull_requests(owner: str, repo: str, base: str, head: str
         return None
     if output.isError:
         return None
-    json_obj = json.loads(output.content[0].text)
+    json_obj = json.loads(output.content[0].text).get('pull_requests', [])
     return json_obj
 
 
@@ -131,14 +136,13 @@ async def github__list_issues(owner: str, repo: str,
         args["labels"] = labels
 
     json_obj = []
-    for page_number in range(1, 40):
+    for page_number in range(1, 10):
         # Assume the number of issues page is at most 40
         # the total number of issues is at most 4000
         try:
-            args["page"] = page_number
-
             # list issues in github MCP might be crashed, so we need to catch the error
             try:
+                args["page"] = page_number
                 output = await manager.execute(
                     server_name="github",
                     tool_name="list_issues",
@@ -151,10 +155,11 @@ async def github__list_issues(owner: str, repo: str,
                 return None
             if output.isError:
                 return None
-            current_page_json = json.loads(output.content[0].text)
+            current_page_json = json.loads(output.content[0].text).get('issues', [])
             if len(current_page_json) == 0:
                 break
             json_obj.extend(current_page_json)
+
         except (json.JSONDecodeError, IndexError, KeyError) as e:
             print(f"Error parsing issues response on page {page_number}: {e}")
             break
@@ -185,7 +190,7 @@ async def github__get_issue_comments(owner: str, repo: str, issue_number: int, *
         return None
     if output.isError:
         return None
-    json_obj = json.loads(output.content[0].text)
+    json_obj = json.loads(output.content[0].text).get('comments', [])
     return json_obj
 
 
@@ -197,13 +202,8 @@ async def github__get_issue_comments(owner: str, repo: str, issue_number: int, *
 async def github_check_repository(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     """Check whether a Github repository exists."""
     _, query = args
-    if '/' in query and not query.startswith(('user:', 'repo:')):
-        owner = query.split('/')[0]
-        search_query = f"user:{owner}"
-    else:
-        search_query = query
-    
-    repos = await github__check_repository(search_query, **kwargs)
+     
+    repos = await github__check_repository(query, **kwargs)
     if repos is None or repos['total_count'] == 0:
         return False, "the repository doesn't exist"
 
@@ -241,21 +241,17 @@ async def github_check_file_content(x: dict, *args, **kwargs) -> Tuple[bool, str
 
     resp = await github__get_file_contents(
             op_args['owner'], op_args['repo'], op_args['path'], op_args['branch'], **kwargs)
-    resp = json.loads(resp)
-    resp = resp.get('content', '')
     expected_file_content = ""
     if isinstance(value, str):
         expected_file_content = value
     elif isinstance(value, dict):
         expected_file_content = await github__get_file_contents(
             value['owner'], value['repo'], value['path'], value['branch'], **kwargs)
-
+        
     if resp is None:
         return False, "the file content is not found"
     if expected_file_content == "":
         return False, "the expected file content is not found"
-    print(f"************** 检查文件内容: {expected_file_content.strip()}")
-    print(f"************** 检查文件内容: {resp.strip()}")
     if not expected_file_content.strip() == resp.strip():
         return False, "the file content is incorrect!"
     return True, ""
@@ -312,13 +308,15 @@ async def github_check_file_content_and_issue_count(x: dict, *args, **kwargs) ->
     async def _get_groundtruth_repo_list(repo_owner, repo_name, issue_state, issue_labels):
         repo_list = await github__check_repository(f"user:{repo_owner} {repo_name} in:name",
                                                    **kwargs)
+        repo_list = repo_list["repositories"]
         if repo_list is None:
             return None
         ret = {}
-        for repo in repo_list["items"]:
+        for repo in repo_list:
             repo_full_name = repo["full_name"]
-            issues = await github__list_issues(repo["owner"]["login"], repo["name"],
-                                               labels=issue_labels, state=issue_state)
+            owner, repo_name = repo_full_name.split('/', 1)
+            issues = await github__list_issues(owner, repo_name,
+                                               state=issue_state, labels=issue_labels)
             ret[repo_full_name] = len(issues)
         return ret
 
@@ -333,6 +331,7 @@ async def github_check_file_content_and_issue_count(x: dict, *args, **kwargs) ->
                 assert len(csv_columns) == 2, "the number of columns should be 2"
                 repository_name = row[csv_columns[0]]
                 return_repo_list[repository_name] = int(row[csv_columns[1]])
+            print(f"return_repo_list: {return_repo_list}")
             return return_repo_list
         if file_type == "json":
             return json.loads(file_content)
@@ -462,6 +461,9 @@ async def github_check_number_of_issues(x: dict, *args, **kwargs) -> Tuple[bool,
             labels = [label['name'] for label in issue['labels']]
             if not all(ele in labels for ele in condition["labels"]):
                 return False
+        if "state" in condition and condition["state"] is not None:
+            if issue["state"] != condition["state"]:
+                return False
         if "comments" in condition and condition["comments"] is not None:
             comments = await github__get_issue_comments(op_args['owner'], op_args['repo'], issue['number'])
             if not any(comment['body'] == condition["comments"] for comment in comments):
@@ -479,12 +481,10 @@ async def github_check_number_of_issues(x: dict, *args, **kwargs) -> Tuple[bool,
     issues = await github__list_issues(
         op_args['owner'], op_args['repo'], state=state, labels=labels
     )
-    if issues is None:
-        return False, "the issues are not found"
-
     filter_args = {
         "title": title,
         "labels": labels,
+        "state": state,
         "comments": comments
     }
     filtered_issues = [issue for issue in issues if await _filter(issue, filter_args)]

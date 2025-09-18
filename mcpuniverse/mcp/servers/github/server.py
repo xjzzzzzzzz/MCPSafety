@@ -62,7 +62,6 @@ def build_server(port: int = 8000) -> FastMCP:
             raise ValueError(f"Failed to initialize GitHub client: {str(e)}")
     
     # ==================== Context Tools ====================
-    
     @mcp.tool()
     def get_me():
         """Get details of the authenticated GitHub user. Use this when a request is about the user's own profile for GitHub. Or when information is missing to build other tool calls."""
@@ -175,8 +174,9 @@ def build_server(port: int = 8000) -> FastMCP:
         """
         try:
             client = get_github_client()
-            repositories = client.search_repositories(query, page=page, per_page=per_page)
-            
+            repositories = client.search_repositories(query)
+            repositories_page = repositories.get_page(page - 1)
+            repositories_list = list(repositories_page)[:per_page]
             if repositories.totalCount == 0 and query.startswith('user:'):
                 username = query.replace('user:', '')
                 try:
@@ -187,7 +187,7 @@ def build_server(port: int = 8000) -> FastMCP:
                     pass
             
             results = []
-            for repo in repositories:
+            for repo in repositories_list:
                 if minimal_output:
                     results.append({
                         "id": repo.id,
@@ -276,12 +276,13 @@ def build_server(port: int = 8000) -> FastMCP:
             repository = client.get_repo(f"{owner}/{repo}")
             
             if sha:
-                commits = repository.get_commits(sha=sha, page=page, per_page=per_page)
+                commits = repository.get_commits(sha=sha)
             else:
-                commits = repository.get_commits(page=page, per_page=per_page)
-            
+                commits = repository.get_commits()
+            commits_page = commits.get_page(page - 1)
+            commits_list = list(commits_page)[:per_page]
             results = []
-            for commit in commits:
+            for commit in commits_list:
                 results.append({
                     "sha": commit.sha,
                     "message": commit.commit.message if commit.commit else "No commit message",
@@ -407,10 +408,12 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
-            tags = repository.get_tags(page=page, per_page=per_page)
+            tags = repository.get_tags()
+            tags_page = tags.get_page(page - 1)
+            tags_list = list(tags_page)[:per_page]
             
             results = []
-            for tag in tags:
+            for tag in tags_list:
                 results.append({
                     "name": tag.name,
                     "commit": {
@@ -473,10 +476,12 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
-            releases = repository.get_releases(page=page, per_page=per_page)
+            releases = repository.get_releases()
+            releases_page = releases.get_page(page - 1)
+            releases_list = list(releases_page)[:per_page]
             
             results = []
-            for release in releases:
+            for release in releases_list:
                 results.append({
                     "id": release.id,
                     "tag_name": release.tag_name,
@@ -568,10 +573,12 @@ def build_server(port: int = 8000) -> FastMCP:
         """
         try:
             client = get_github_client()
-            results = client.search_code(query, page=page, per_page=per_page)
+            results = client.search_code(query)
+            results_page = results.get_page(page - 1)
+            results_list = list(results_page)[:per_page]
             
             code_results = []
-            for item in results:
+            for item in results_list:
                 code_results.append({
                     "name": item.name,
                     "path": item.path,
@@ -920,9 +927,10 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             issues = repository.get_issues(state=state)
-            
+            issues_page = issues.get_page(page - 1)
+            issues_list = list(issues_page)[:per_page]
             results = []
-            for issue in issues:
+            for issue in issues_list:
                 results.append({
                     "number": issue.number,
                     "title": issue.title,
@@ -1055,10 +1063,12 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             issue = repository.get_issue(issue_number)
-            comments = issue.get_comments(page=page, per_page=per_page)
+            comments = issue.get_comments()
+            comments_page = comments.get_page(page - 1)
+            comments_list = list(comments_page)[:per_page]
             
             results = []
-            for comment in comments:
+            for comment in comments_list:
                 results.append({
                     "id": comment.id,
                     "body": comment.body,
@@ -1083,10 +1093,12 @@ def build_server(port: int = 8000) -> FastMCP:
         """
         try:
             client = get_github_client()
-            issues = client.search_issues(query, page=page, per_page=per_page)
+            issues = client.search_issues(query)
+            issues_page = issues.get_page(page - 1)
+            issues_list = list(issues_page)[:per_page]
             
             results = []
-            for issue in issues:
+            for issue in issues_list:
                 results.append({
                     "number": issue.number,
                     "title": issue.title,
@@ -1421,10 +1433,12 @@ def build_server(port: int = 8000) -> FastMCP:
         """
         try:
             client = get_github_client()
-            pulls = client.search_issues(query + " is:pr", page=page, per_page=per_page)
+            pulls = client.search_issues(query + " is:pr")
+            pulls_page = pulls.get_page(page - 1)
+            pulls_list = list(pulls_page)[:per_page]
             
             results = []
-            for pr in pulls:
+            for pr in pulls_list:
                 results.append({
                     "number": pr.number,
                     "title": pr.title,
@@ -1461,10 +1475,12 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             pr = repository.get_pull(pull_number)
-            files = pr.get_files(page=page, per_page=per_page)
+            files = pr.get_files()  
+            files_page = files.get_page(page - 1)
+            files_list = list(files_page)[:per_page]
             
             results = []
-            for file in files:
+            for file in files_list:
                 results.append({
                     "filename": file.filename,
                     "status": file.status,
@@ -1526,10 +1542,12 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             pr = repository.get_pull(pull_number)
-            comments = pr.get_issue_comments(page=page, per_page=per_page)
+            comments = pr.get_issue_comments()
+            comments_page = comments.get_page(page - 1)
+            comments_list = list(comments_page)[:per_page]
             
             results = []
-            for comment in comments:
+            for comment in comments_list:
                 results.append({
                     "id": comment.id,
                     "body": comment.body,
@@ -1558,10 +1576,11 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             pr = repository.get_pull(pull_number)
-            reviews = pr.get_reviews(page=page, per_page=per_page)
-            
+            reviews = pr.get_reviews()
+            reviews_page = reviews.get_page(page - 1)
+            reviews_list = list(reviews_page)[:per_page]
             results = []
-            for review in reviews:
+            for review in reviews_list:
                 results.append({
                     "id": review.id,
                     "body": review.body,
@@ -1888,10 +1907,12 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
-            workflows = repository.get_workflows(page=page, per_page=per_page)
+            workflows = repository.get_workflows()
+            workflows_page = workflows.get_page(page - 1)
+            workflows_list = list(workflows_page)[:per_page]
             
             results = []
-            for workflow in workflows:
+            for workflow in workflows_list:
                 results.append({
                     "id": workflow.id,
                     "name": workflow.name,
@@ -1922,12 +1943,14 @@ def build_server(port: int = 8000) -> FastMCP:
             repository = client.get_repo(f"{owner}/{repo}")
             
             if workflow_id:
-                runs = repository.get_workflow_runs(workflow_id=workflow_id, page=page, per_page=per_page)
+                runs = repository.get_workflow_runs(workflow_id=workflow_id)
             else:
-                runs = repository.get_workflow_runs(page=page, per_page=per_page)
+                runs = repository.get_workflow_runs()
+            runs_page = runs.get_page(page - 1)
+            runs_list = list(runs_page)[:per_page]
             
             results = []
-            for run in runs:
+            for run in runs_list:
                 results.append({
                     "id": run.id,
                     "name": run.name,
@@ -2017,10 +2040,12 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             run = repository.get_workflow_run(run_id)
-            jobs = run.get_jobs(page=page, per_page=per_page)
+            jobs = run.get_jobs()
+            jobs_page = jobs.get_page(page - 1)
+            jobs_list = list(jobs_page)[:per_page]
             
             results = []
-            for job in jobs:
+            for job in jobs_list:
                 results.append({
                     "id": job.id,
                     "name": job.name,
@@ -2143,10 +2168,11 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             run = repository.get_workflow_run(run_id)
-            artifacts = run.get_artifacts(page=page, per_page=per_page)
-            
+            artifacts = run.get_artifacts()
+            artifacts_page = artifacts.get_page(page - 1)
+            artifacts_list = list(artifacts_page)[:per_page]
             results = []
-            for artifact in artifacts:
+            for artifact in artifacts_list:
                 results.append({
                     "id": artifact.id,
                     "name": artifact.name,
@@ -2444,10 +2470,11 @@ def build_server(port: int = 8000) -> FastMCP:
         """
         try:
             client = get_github_client()
-            users = client.search_users(query, page=page, per_page=per_page)
-            
+            users = client.search_users(query)
+            users_page = users.get_page(page - 1)
+            users_list = list(users_page)[:per_page]
             results = []
-            for user in users:
+            for user in users_list:
                 results.append({
                     "login": user.login,
                     "id": user.id,
@@ -2478,10 +2505,11 @@ def build_server(port: int = 8000) -> FastMCP:
         """
         try:
             client = get_github_client()
-            orgs = client.search_users(query + " type:org", page=page, per_page=per_page, sort=sort, order=order)
-            
+            orgs = client.search_users(query + " type:org", sort=sort, order=order)
+            orgs_page = orgs.get_page(page - 1)
+            orgs_list = list(orgs_page)[:per_page]
             results = []
-            for org in orgs:
+            for org in orgs_list:
                 if org.type == "Organization":
                     results.append({
                         "login": org.login,
@@ -2521,13 +2549,15 @@ def build_server(port: int = 8000) -> FastMCP:
                 since_time = datetime.fromisoformat(since.replace('Z', '+00:00'))
             
             if username:
-                gists = client.get_user(username).get_gists(since=since_time, page=page, per_page=per_page)
+                gists = client.get_user(username).get_gists(since=since_time)
             else:
                 user = client.get_user()
-                gists = user.get_gists(since=since_time, page=page, per_page=per_page)
+                gists = user.get_gists(since=since_time)
+            gists_page = gists.get_page(page - 1)
+            gists_list = list(gists_page)[:per_page]
             
             results = []
-            for gist in gists:
+            for gist in gists_list:
                 results.append({
                     "id": gist.id,
                     "description": gist.description,
@@ -2664,13 +2694,12 @@ def build_server(port: int = 8000) -> FastMCP:
             alerts = repository.get_code_scanning_alerts(
                 state=state,
                 severity=severity,
-                tool_name=tool_name,
-                page=page,
-                per_page=per_page
+                tool_name=tool_name
             )
-            
+            alerts_page = alerts.get_page(page - 1)
+            alerts_list = list(alerts_page)[:per_page]
             results = []
-            for alert in alerts:
+            for alert in alerts_list:
                 results.append({
                     "number": alert.number,
                     "state": alert.state,
@@ -2744,13 +2773,12 @@ def build_server(port: int = 8000) -> FastMCP:
             alerts = repository.get_secret_scanning_alerts(
                 state=state,
                 secret_type=secret_type,
-                resolution=resolution,
-                page=page,
-                per_page=per_page
+                resolution=resolution
             )
-            
+            alerts_page = alerts.get_page(page - 1)
+            alerts_list = list(alerts_page)[:per_page]
             results = []
-            for alert in alerts:
+            for alert in alerts_list:
                 results.append({
                     "number": alert.number,
                     "state": alert.state,
@@ -2833,13 +2861,12 @@ def build_server(port: int = 8000) -> FastMCP:
             repository = client.get_repo(f"{owner}/{repo}")
             alerts = repository.get_dependabot_alerts(
                 state=state,
-                severity=severity,
-                page=page,
-                per_page=per_page
+                severity=severity
             )
-            
+            alerts_page = alerts.get_page(page - 1)
+            alerts_list = list(alerts_page)[:per_page]
             results = []
-            for alert in alerts:
+            for alert in alerts_list:
                 results.append({
                     "number": alert.number,
                     "state": alert.state,
@@ -2877,10 +2904,11 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
-            discussions = repository.get_discussions(page=page, per_page=per_page)
-            
+            discussions = repository.get_discussions()
+            discussions_page = discussions.get_page(page - 1)
+            discussions_list = list(discussions_page)[:per_page]
             results = []
-            for discussion in discussions:
+            for discussion in discussions_list:
                 results.append({
                     "id": discussion.id,
                     "number": discussion.number,
@@ -2950,10 +2978,11 @@ def build_server(port: int = 8000) -> FastMCP:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
             discussion = repository.get_discussion(discussion_number)
-            comments = discussion.get_comments(page=page, per_page=per_page)
-            
+            comments = discussion.get_comments()
+            comments_page = comments.get_page(page - 1)
+            comments_list = list(comments_page)[:per_page]
             results = []
-            for comment in comments:
+            for comment in comments_list:
                 results.append({
                     "id": comment.id,
                     "body": comment.body,
@@ -2980,10 +3009,12 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
-            categories = repository.get_discussion_categories(page=page, per_page=per_page)
+            categories = repository.get_discussion_categories()
+            categories_page = categories.get_page(page - 1)
+            categories_list = list(categories_page)[:per_page]
             
             results = []
-            for category in categories:
+            for category in categories_list:
                 results.append({
                     "id": category.id,
                     "name": category.name,
@@ -3097,10 +3128,12 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             repository = client.get_repo(f"{owner}/{repo}")
-            advisories = repository.get_security_advisories(page=page, per_page=per_page)
+            advisories = repository.get_security_advisories()
+            advisories_page = advisories.get_page(page - 1)
+            advisories_list = list(advisories_page)[:per_page]
             
             results = []
-            for advisory in advisories:
+            for advisory in advisories_list:
                 results.append({
                     "ghsa_id": advisory.ghsa_id,
                     "cve_id": advisory.cve_id,
@@ -3129,10 +3162,11 @@ def build_server(port: int = 8000) -> FastMCP:
         try:
             client = get_github_client()
             organization = client.get_organization(org)
-            advisories = organization.get_security_advisories(page=page, per_page=per_page)
-            
+            advisories = organization.get_security_advisories()
+            advisories_page = advisories.get_page(page - 1)
+            advisories_list = list(advisories_page)[:per_page]
             results = []
-            for advisory in advisories:
+            for advisory in advisories_list:
                 results.append({
                     "ghsa_id": advisory.ghsa_id,
                     "cve_id": advisory.cve_id,

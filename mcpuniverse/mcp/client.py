@@ -231,7 +231,7 @@ class MCPClient(metaclass=AutodocABCMeta):
         attempt = 0
         while attempt < retries:
             try:
-                self._logger.info("Executing %s...", tool_name)
+                self._logger.info("Executing %s with arguments: %s", tool_name, arguments)
                 return await self._session.call_tool(tool_name, arguments)
             except Exception as e:
                 attempt += 1

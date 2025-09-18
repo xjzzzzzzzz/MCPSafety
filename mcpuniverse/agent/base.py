@@ -190,7 +190,7 @@ class BaseAgent(Executor, ExportConfigMixin, metaclass=ComponentABCMeta):
         for server in mcp_servers:
             server_name = server["name"]
             client = await self._mcp_manager.build_client(
-                server_name, transport=server.get("transport", "stdio"))
+                server_name, transport=server.get("transport", "stdio"), timeout=120)
             client.project_id = self._project_id
             client._agent = self  # Store agent reference for tool call tracking
             self._mcp_clients[server_name] = client
