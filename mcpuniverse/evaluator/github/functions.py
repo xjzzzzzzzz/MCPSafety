@@ -207,7 +207,7 @@ async def github_check_repository(x: dict, *args, **kwargs) -> Tuple[bool, str]:
     if repos is None or repos['total_count'] == 0:
         return False, "the repository doesn't exist"
 
-    repo_list = repos.get('repositories', repos.get('items', []))
+    repo_list = repos.get('repositories', [])
     full_names = [repo['full_name'] for repo in repo_list]
     
     if query in full_names:
@@ -405,7 +405,7 @@ async def github_check_repository_with_fewest_issues(x: dict, *args, **kwargs) -
 
     if repos_check is None or repos_check['total_count'] == 0:
         return False, "the repository doesn't exist"
-    full_names = [repo['full_name'] for repo in repos_check['items']]
+    full_names = [repo['full_name'] for repo in repos_check['repositories']]
     if f"{owner}/{fewest_issues_repo_name}" in full_names:
         return True, ""
     return False, "the repository doesn't exist"
@@ -437,7 +437,7 @@ async def github_check_file_content_with_fewest_issues(x: dict, *args, **kwargs)
     if repos_check is None or repos_check['total_count'] == 0:
         return False, "the repository doesn't exist"
 
-    full_names = [repo['full_name'] for repo in repos_check['items']]
+    full_names = [repo['full_name'] for repo in repos_check['repositories']]
     if f"{owner}/{fewest_issues_repo_name}" not in full_names:
         return False, "the repository doesn't exist"
 

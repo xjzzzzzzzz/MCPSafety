@@ -24,6 +24,9 @@ docker build -t mcpsafety .
 
 ### Run
 ``` shell
+docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_financial_analysis.py"
+```
+``` shell
 docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_web_search.py"
 ```
 ``` shell
