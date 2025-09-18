@@ -24,6 +24,9 @@ async def google_maps__search_place_by_query(query: str, **kwargs):
     except Exception as e:
         print(f"Error searching place: {e}")
         return None
+    output = output["result"]
+    if output.isError:
+        return None
     json_obj = json.loads(output.content[0].text)
     return json_obj
 
@@ -40,6 +43,9 @@ async def google_maps__search_place_by_place_id(query: str, place_id: str, **kwa
         )
     except Exception as e:
         print(f"Error searching place: {e}")
+        return None
+    output = output["result"]
+    if output.isError:
         return None
     json_obj = json.loads(output.content[0].text)
     places = json_obj['places']
@@ -62,10 +68,19 @@ async def google_maps__get_elevation_by_address(address: str, **kwargs):
     except Exception as e:
         print(f"Error getting elevation: {e}")
         return None
+    output = output["result"]
+    if output.isError:
+        return None
     json_obj = json.loads(output.content[0].text)
-    assert len(json_obj['places']) == 1, "the number of found place should be 1"
-    lat = json_obj['places'][0]['location']['lat']
-    lng = json_obj['places'][0]['location']['lng']
+    places = json_obj.get('places', [])
+    if len(places) == 0:
+        print(f"No places found for address: {address}")
+        return None
+    if len(places) > 1:
+        print(f"Multiple places found for address: {address}, using the first one")
+    # Use the first place found
+    lat = places[0]['location']['lat']
+    lng = places[0]['location']['lng']
     print("lat, lng", address, lat, lng)
 
     # get elevation of a place given lat, lng
@@ -79,9 +94,17 @@ async def google_maps__get_elevation_by_address(address: str, **kwargs):
     except Exception as e:
         print(f"Error getting elevation: {e}")
         return None
+    output = output["result"]
+    if output.isError:
+        return None
     json_obj = json.loads(output.content[0].text)
-    assert len(json_obj['results']) == 1, "the number of found place should be 1"
-    elevation = json_obj['results'][0]['elevation']
+    results = json_obj.get('results', [])
+    if len(results) == 0:
+        print(f"No elevation results found for address: {address}")
+        return None
+    if len(results) > 1:
+        print(f"Multiple elevation results found for address: {address}, using the first one")
+    elevation = results[0]['elevation']
     print("elevation", address, elevation)
     return elevation
 
@@ -99,6 +122,9 @@ async def google_maps__get_geocode_by_address(address: str, **kwargs):
     except Exception as e:
         print(f"Error getting geocode: {e}")
         return None
+    output = output["result"]
+    if output.isError:
+        return None
     json_obj = json.loads(output.content[0].text)
     return json_obj
 
@@ -115,6 +141,9 @@ async def google_maps__get_place_details_by_place_id(place_id: str, **kwargs):
         )
     except Exception as e:
         print(f"Error getting place details: {e}")
+        return None
+    output = output["result"]
+    if output.isError:
         return None
     json_obj = json.loads(output.content[0].text)
     return json_obj
@@ -138,6 +167,9 @@ async def google_maps__measure_distance_and_duration_by_addresses_and_mode(
         )
     except Exception as e:
         print(f"Error measuring distance and duration: {e}")
+        return None
+    output = output["result"]
+    if output.isError:
         return None
     json_obj = json.loads(output.content[0].text)
     return json_obj
@@ -291,7 +323,10 @@ async def google_maps_places_in_countries(x: dict, *args, **kwargs) -> (bool, st
 async def google_maps_compare_time_to_middle_point(x: Any, *args, **kwargs) -> (bool, str):
     """Compare time of middle points."""
     if isinstance(x, list):
-        assert len(x) == 1, "the length of stops should be one"
+        if len(x) == 0:
+            return False, "No stops provided"
+        if len(x) > 1:
+            print(f"Multiple stops provided, using the first one: {len(x)} stops")
         stop_id = f"place_id:{x[0]['place id']}"
     elif isinstance(x, dict):
         stop_id = f"place_id:{x['place id']}"

@@ -144,7 +144,15 @@ def build_server(port: int) -> FastMCP:
         }
         
         if location:
-            params["location"] = f"{location['latitude']},{location['longitude']}"
+            # Handle both 'latitude'/'longitude' and 'lat'/'lng' formats
+            if 'latitude' in location and 'longitude' in location:
+                params["location"] = f"{location['latitude']},{location['longitude']}"
+            elif 'lat' in location and 'lng' in location:
+                params["location"] = f"{location['lat']},{location['lng']}"
+            else:
+                return json.dumps({
+                    "error": "Location must contain either 'latitude'/'longitude' or 'lat'/'lng' keys"
+                })
         if radius:
             params["radius"] = str(radius)
         
@@ -261,7 +269,18 @@ def build_server(port: int) -> FastMCP:
             JSON string with elevation data
         """
         url = "https://maps.googleapis.com/maps/api/elevation/json"
-        location_string = "|".join([f"{loc['latitude']},{loc['longitude']}" for loc in locations])
+        # Handle both 'latitude'/'longitude' and 'lat'/'lng' formats
+        location_parts = []
+        for loc in locations:
+            if 'latitude' in loc and 'longitude' in loc:
+                location_parts.append(f"{loc['latitude']},{loc['longitude']}")
+            elif 'lat' in loc and 'lng' in loc:
+                location_parts.append(f"{loc['lat']},{loc['lng']}")
+            else:
+                return json.dumps({
+                    "error": f"Location must contain either 'latitude'/'longitude' or 'lat'/'lng' keys. Got: {list(loc.keys())}"
+                })
+        location_string = "|".join(location_parts)
         params = {
             "locations": location_string,
             "key": api_key
