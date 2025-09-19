@@ -4,14 +4,17 @@ Terminal MCP Server - Model Context Protocol integration for terminal commands
 This module provides a FastMCP server that enables remote execution of terminal commands
 through the MCP protocol. It supports running shell commands in a controlled workspace environment.
 """
-# pylint: disable=broad-exception-caught
 import os
 import subprocess
 import click
 from typing import Dict, Any
+from dotenv import load_dotenv
 
 from mcp.server.fastmcp import FastMCP
 from mcpuniverse.common.logger import get_logger
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 def build_server(port: int) -> FastMCP:
@@ -23,9 +26,9 @@ def build_server(port: int) -> FastMCP:
     """
     mcp = FastMCP("terminal", port=port)
     
-    # Default working directory
-    default_working_directory = os.path.expanduser("~/mcp/workspace")
-
+    # Get working directory from environment variable, fallback to default
+    default_working_directory =  os.environ.get("TERMINAL_WORKING_DIRECTORY", os.path.expanduser("~/mcp/workspace"))
+    print(f"Default working directory: {default_working_directory}")
     @mcp.tool()
     async def run_command(command: str) -> str:
         """
