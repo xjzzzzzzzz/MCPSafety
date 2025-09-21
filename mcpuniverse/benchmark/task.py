@@ -6,6 +6,7 @@ import re
 import os
 import copy
 import json
+from dotenv import load_dotenv
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 from pydantic_core import from_json
@@ -18,6 +19,10 @@ from mcpuniverse.common.logger import get_logger
 from mcpuniverse.mcp.manager import MCPManager
 from mcpuniverse.common.context import Context
 from .cleanups import CLEANUP_FUNCTIONS
+
+
+load_dotenv()
+
 
 
 class TaskCleanupConfig(BaseModel):
@@ -94,7 +99,6 @@ class Task(metaclass=AutodocABCMeta):
         self._config = TaskConfig.model_validate(config)
         self._context = context if context else Context()
         
-        # 将attack_category添加到context的metadata中
         if self._config.attack_category:
             if not hasattr(self._context, 'metadata'):
                 self._context.metadata = {}
@@ -152,7 +156,12 @@ class Task(metaclass=AutodocABCMeta):
         Check if this task contains client side attack configuration.
         """
         return self._config.attack_category in[ 'intent_injection','data_injection','identity_injection','replay_injection']
-                
+    def get_identity_injection(self) -> bool:
+        """
+        Check if this task contains identity injection attack configuration.
+        """
+        return self._config.attack_category == 'identity_injection'
+
     def get_mcp_server_modifications(self) -> List[dict]:
         """
         Get MCP server modifications for this task.
@@ -305,6 +314,13 @@ class Task(metaclass=AutodocABCMeta):
         # Restore tool descriptions for both mcp_server_modifications and mcp_server_update
         if agent:
             self.restore_tool_descriptions(agent)
+        
+        # Restore original tokens after identity injection attack
+        if hasattr(self, '_saved_tokens') and self._saved_tokens:
+            import os
+            for key, value in self._saved_tokens.items():
+                self._logger.info(f"Restoring original token for {key}: {value[:10]}...")
+                os.environ[key] = value
     
     async def track_tool_call(self, tool_name: str, agent) -> bool:
         """

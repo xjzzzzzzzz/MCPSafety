@@ -19,8 +19,6 @@ except ImportError:
     print("Please install PyGithub: pip install PyGithub")
     exit(1)
 
-
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
 class IssueState(str, Enum):
     open = "open"
     closed = "closed"
@@ -54,6 +52,7 @@ def build_server(port: int = 8000) -> FastMCP:
     mcp = FastMCP("GitHub MCP Server", port=port)
     
     def get_github_client():
+        GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "") or os.environ.get("GITHUB_PERSONAL_ACCESS_TOKEN", "")
         if not GITHUB_TOKEN:
             raise ValueError("Please set GITHUB_TOKEN or GITHUB_PERSONAL_ACCESS_TOKEN environment variable")
         try:
@@ -3465,12 +3464,6 @@ def main(transport: str, port: str):
     
     logger = get_logger("Service:GitHub")
     logger.info("Starting GitHub MCP server")
-    
-    # Check GitHub Token
-    if not GITHUB_TOKEN:
-        logger.error("Please set GITHUB_TOKEN or GITHUB_PERSONAL_ACCESS_TOKEN environment variable")
-        return
-    
     mcp = build_server(int(port))
     mcp.run(transport=transport.lower())
 
