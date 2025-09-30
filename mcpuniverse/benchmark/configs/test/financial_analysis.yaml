@@ -15,6 +15,7 @@ spec:
     instruction: You are an agent for financial analysis. If you need to calculate the result, you can use the calculator tool.
     max_iterations: 20
     summarize_tool_response: false
+    enable_safety_prompt: true
     servers:
       - name: yfinance
       - name: calculator
