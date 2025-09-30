@@ -101,6 +101,8 @@ class ReAct(BaseAgent):
         return build_system_prompt(
             system_prompt_template=self._config.system_prompt,
             tool_prompt_template=self._config.tools_prompt,
+            safety_prompt_template=self._config.safety_prompt,
+            enable_safety_prompt=self._config.enable_safety_prompt,
             tools=self._tools,
             **params
         )

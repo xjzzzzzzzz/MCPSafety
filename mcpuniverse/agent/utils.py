@@ -50,6 +50,8 @@ def get_tools_description(tools: Dict[str, List[Tool]]) -> str:
 def build_system_prompt(
         system_prompt_template: str,
         tool_prompt_template: str = "",
+        safety_prompt_template: str = "",
+        enable_safety_prompt: bool = False,
         tools: Optional[Dict[str, List[Tool]]] = None,
         include_tool_description: Optional[bool] = True,
         **kwargs
@@ -65,6 +67,10 @@ def build_system_prompt(
             ends with ".j2", it's treated as a path to a Jinja2 template file.
         tool_prompt_template (str, optional): The template for the tool prompt. If it
             ends with ".j2", it's treated as a path to a Jinja2 template file.
+        safety_prompt_template (str, optional): The template for the safety prompt. If it
+            ends with ".j2", it's treated as a path to a Jinja2 template file.
+        enable_safety_prompt (bool, optional): Whether to include the safety prompt. 
+            Defaults to False.
         tools (Dict[str, List[Tool]], optional): A dictionary of tools, where keys
             are server names and values are lists of Tool objects.
         include_tool_description (bool, optional): Whether to include tool descriptions
@@ -78,13 +84,25 @@ def build_system_prompt(
         If both tool_prompt_template and tools are provided, a tools prompt will be
         generated and included in the final system prompt.
     """
+    # Read template files
     if system_prompt_template.endswith(".j2"):
         with open(system_prompt_template, "r", encoding="utf-8") as f:
             system_prompt_template = f.read()
     if tool_prompt_template.endswith(".j2"):
         with open(tool_prompt_template, "r", encoding="utf-8") as f:
             tool_prompt_template = f.read()
+    if safety_prompt_template.endswith(".j2"):
+        with open(safety_prompt_template, "r", encoding="utf-8") as f:
+            safety_prompt_template = f.read()
 
+    # Render safety prompt if enabled
+    safety_prompt = ""
+    if enable_safety_prompt and safety_prompt_template:
+        env = Environment(trim_blocks=True, lstrip_blocks=True)
+        template = env.from_string(safety_prompt_template)
+        safety_prompt = template.render(**kwargs)
+
+    # Render tools prompt
     tools_prompt = ""
     tools_description = get_tools_description(tools) if tools else ""
     if include_tool_description and tool_prompt_template and tools_description:
@@ -93,8 +111,11 @@ def build_system_prompt(
         kwargs.update({"TOOLS_DESCRIPTION": tools_description})
         tools_prompt = template.render(**kwargs)
 
+    # Render final system prompt
     env = Environment(trim_blocks=True, lstrip_blocks=True)
     template = env.from_string(system_prompt_template)
+    if safety_prompt:
+        kwargs.update({"SAFETY_PROMPT": safety_prompt})
     if tools_prompt:
         kwargs.update({"TOOLS_PROMPT": tools_prompt})
     return template.render(**kwargs).strip()

@@ -3,7 +3,7 @@ spec:
   name: llm-1
   type: qwen
   config:
-    model_name: qwen-max-latest
+    model_name: ecnu-plus
 
 ---
 kind: agent
@@ -68,8 +68,6 @@ spec:
     - test/financial_analysis/yfinance_task_0038.json
     - test/financial_analysis/yfinance_task_0039.json
     - test/financial_analysis/yfinance_task_0040.json
-    - test/financial_analysis/yfinance_task_0041.json
-    - test/financial_analysis/yfinance_task_0042.json
     - test/financial_analysis/yfinance_task_0043.json
     - test/financial_analysis/yfinance_task_0044.json
     - test/financial_analysis/yfinance_task_0045.json

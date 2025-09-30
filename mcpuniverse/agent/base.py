@@ -75,6 +75,9 @@ class BaseAgentConfig(BaseConfig):
     # Prompt templates
     system_prompt: str = os.path.join(DEFAULT_CONFIG_FOLDER, "system_prompt.j2")
     tools_prompt: str = os.path.join(DEFAULT_CONFIG_FOLDER, "tools_prompt.j2")
+    safety_prompt: str = os.path.join(DEFAULT_CONFIG_FOLDER, "safety_prompt.j2")
+    # Enable/disable safety prompt
+    enable_safety_prompt: bool = False
     # Additional template variables
     template_vars: dict = field(default_factory=dict)
     # A list of servers: [{"name": server_name}, {"name": server_name, "transport": "sse"}]

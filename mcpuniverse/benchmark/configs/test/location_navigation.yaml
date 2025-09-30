@@ -1,9 +1,9 @@
 kind: llm
 spec:
   name: llm-1
-  type: qwen
+  type: openai
   config:
-    model_name: qwen3-14b
+    model_name: gpt-4o
 
 ---
 kind: agent
@@ -15,6 +15,7 @@ spec:
     instruction: You are an agent for location navigation.
     max_iterations: 20
     summarize_tool_response: false
+    enable_safety_prompt: true
     servers:
       - name: google-maps
       - name: fetch
@@ -67,8 +68,6 @@ spec:
     - test/location_navigation/google_maps_task_0038.json
     - test/location_navigation/google_maps_task_0039.json
     - test/location_navigation/google_maps_task_0040.json   
-    - test/location_navigation/google_maps_task_0041.json
-    - test/location_navigation/google_maps_task_0042.json
     - test/location_navigation/google_maps_task_0043.json
     - test/location_navigation/google_maps_task_0044.json
     - test/location_navigation/google_maps_task_0045.json
