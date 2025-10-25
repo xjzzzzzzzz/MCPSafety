@@ -311,16 +311,16 @@ def build_server(port: int) -> FastMCP:
         Args:
             origin: Starting point address or coordinates
             destination: Ending point address or coordinates
-            mode: Travel mode (driving, walking, bicycling, transit)
+            travelMode: Travel mode (drive, walk, bicycle, transit, two_wheeler)
             
         Returns:
             JSON string with directions
         """
-        url = "https://maps.googleapis.com/maps/api/directions/json"
+        url = "https://routes.googleapis.com/directions/v2:computeRoutes"
         params = {
             "origin": origin,
             "destination": destination,
-            "mode": mode,
+            "travelMode": mode,
             "key": api_key
         }
         

@@ -93,7 +93,7 @@ class GeminiModel(BaseLLM):
 
         config = types.GenerateContentConfig(
             http_options=types.HttpOptions(
-                timeout=int(kwargs.get("timeout", 30)) * 1000
+                timeout=int(kwargs.get("timeout", 60)) * 1000
             ),
             system_instruction=system_message,
             temperature=self.config.temperature,

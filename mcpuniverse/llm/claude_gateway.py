@@ -106,14 +106,14 @@ class ClaudeGatewayModel(BaseLLM):
                 "max_tokens": self.config.max_completion_tokens,
                 "system": system_message,
                 "top_p": self.config.top_p,
-                "timeout": int(kwargs.get("timeout", 30)),
+                "timeout": int(kwargs.get("timeout", 60)),
             }
             data.update(kwargs)
             response = requests.post(
                 self.config.model_url,
                 json=data,
                 headers=headers,
-                timeout=int(kwargs.get("timeout", 30))
+                timeout=int(kwargs.get("timeout", 60))
             )
             return json.loads(response.text)['result'][0]['text']
         raise NotImplementedError("claude gateway does not support response_format!")

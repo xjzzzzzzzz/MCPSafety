@@ -107,7 +107,7 @@ class MistralModel(BaseLLM):
                 random_seed=self.config.seed,
                 presence_penalty=self.config.presence_penalty,
                 frequency_penalty=self.config.frequency_penalty,
-                timeout_ms=int(kwargs.get("timeout", 30)) * 1000,
+                timeout_ms=int(kwargs.get("timeout", 60)) * 1000,
                 messages=messages,
                 **kwargs
             )
@@ -121,7 +121,7 @@ class MistralModel(BaseLLM):
             random_seed=self.config.seed,
             presence_penalty=self.config.presence_penalty,
             frequency_penalty=self.config.frequency_penalty,
-            timeout_ms=int(kwargs.get("timeout", 30)) * 1000,
+            timeout_ms=int(kwargs.get("timeout", 60)) * 1000,
             messages=messages,
             response_format={"type": "json_object"},
             **kwargs

@@ -102,7 +102,7 @@ class ClaudeModel(BaseLLM):
                 max_tokens=self.config.max_completion_tokens,
                 temperature=self.config.temperature,
                 top_p=self.config.top_p,
-                timeout=int(kwargs.get("timeout", 30)),
+                timeout=int(kwargs.get("timeout", 60)),
                 system=system_message,
                 messages=formatted_messages,
                 **kwargs
@@ -115,7 +115,7 @@ class ClaudeModel(BaseLLM):
             max_tokens=self.config.max_completion_tokens,
             temperature=self.config.temperature,
             top_p=self.config.top_p,
-            timeout=int(kwargs.get("timeout", 30)),
+            timeout=int(kwargs.get("timeout", 60)),
             system=system_message,
             messages=formatted_messages,
             tools=[
