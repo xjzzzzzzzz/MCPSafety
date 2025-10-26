@@ -49,7 +49,41 @@ async def make_request(url: str, params: Dict[str, Any]) -> Dict[str, Any]:
             "status": "ERROR",
             "error_message": f"Unexpected error: {str(e)}"
         }
-
+async def make_post_request(url: str, data: Dict[str, Any], headers: Dict[str, Any]) -> Dict[str, Any]:
+    """Make HTTP request to Google Maps API."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=data, headers=headers)
+            response.raise_for_status()  
+            return response.json()
+    except httpx.HTTPStatusError as e:
+        error_text = e.response.text
+        try:
+            # Try to parse error response as JSON
+            error_json = e.response.json()
+            return {"error": error_json}
+        except:
+            # If not JSON, return text
+            return {
+                "error": {
+                    "message": f"HTTP {e.response.status_code}: {error_text}",
+                    "code": e.response.status_code
+                }
+            }
+    except httpx.RequestError as e:
+        return {
+            "error": {
+                "message": f"Request failed: {str(e)}",
+                "code": "REQUEST_ERROR"
+            }
+        }
+    except Exception as e:
+        return {
+            "error": {
+                "message": f"Unexpected error: {str(e)}",
+                "code": "UNEXPECTED_ERROR"
+            }
+        }
 
 def build_server(port: int) -> FastMCP:
     """
@@ -304,51 +338,60 @@ def build_server(port: int) -> FastMCP:
         return json.dumps({"results": results}, indent=2)
 
     @mcp.tool()
-    async def maps_directions(origin: str, destination: str, mode: str = "driving") -> str:
+    async def maps_directions(origin: str, destination: str, mode: str = "drive") -> str:
         """
         Get directions between two points.
         
         Args:
             origin: Starting point address or coordinates
             destination: Ending point address or coordinates
-            travelMode: Travel mode (drive, walk, bicycle, transit, two_wheeler)
+            mode: Travel mode (drive, walk, bicycle, transit, two_wheeler)
             
         Returns:
             JSON string with directions
         """
         url = "https://routes.googleapis.com/directions/v2:computeRoutes"
-        params = {
-            "origin": origin,
-            "destination": destination,
-            "travelMode": mode,
-            "key": api_key
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': api_key,
+            'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters'
         }
+        # Convert mode to Google Maps API format
+        travel_modes = {
+            "drive": "DRIVE",
+            "walk": "WALK",
+            "bicycle": "BICYCLING",
+            "transit": "TRANSIT",
+            "two_wheeler": "TWO_WHEELER"
+        }
+        travel_mode = travel_modes.get(mode.lower(), "DRIVE")
         
-        data = await make_request(url, params)
-        routes = []
-        if data.get("status") != "OK":
+        params = {
+            "origin": {"address": origin},
+            "destination": {"address": destination},
+            "travelMode": travel_mode
+        }
+        data = await make_post_request(url, params, headers)
+        
+        # Check for errors in the response
+        if "error" in data:
             return json.dumps({
-                "error": f"Directions request failed: {data.get('error_message', data.get('status'))}"
+                "error": f"Directions request failed: {data.get('error', {}).get('message', 'Unknown error')}"
             })
         
+        if not data.get("routes"):
+            return json.dumps({
+                "error": f"Directions request failed: No routes returned"
+            })
         
+        # Extract the route data
+        routes = []
         for route in data["routes"]:
-            leg = route["legs"][0]
-            steps = []
-            for step in leg["steps"]:
-                steps.append({
-                    "instructions": step["html_instructions"],
-                    "distance": step["distance"],
-                    "duration": step["duration"],
-                    "travel_mode": step["travel_mode"]
-                })
-            
-            routes.append({
-                "summary": route["summary"],
-                "distance": leg["distance"],
-                "duration": leg["duration"],
-                "steps": steps
-            })
+            route_data = {
+                "distanceMeters": route.get("distanceMeters"),
+                "duration": route.get("duration")
+            }
+            routes.append(route_data)
         
         return json.dumps({"routes": routes}, indent=2)
 
