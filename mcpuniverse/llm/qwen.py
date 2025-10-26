@@ -46,7 +46,7 @@ class QwenConfig(BaseConfig):
     presence_penalty: float = 0.0
     max_completion_tokens: int = 2048
     seed: int = 12345
-    base_url: str = "https://chat.ecnu.edu.cn/open/api/v1"
+    base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 
 class QwenModel(BaseLLM):
@@ -63,7 +63,7 @@ class QwenModel(BaseLLM):
     config_class = QwenConfig
     alias = "qwen"
     env_vars = ["QWEN_API_KEY"]
-    print("**********************")
+
     def __init__(self, config: Optional[Union[Dict, str]] = None):
         """
         Initializes the QwenModel instance.
@@ -100,70 +100,43 @@ class QwenModel(BaseLLM):
                 response_format is provided, or None if parsing structured output fails.
         """
         client = OpenAI(
-                api_key='sk-79fe944fbe8e40fb8a407c75636b7c29',  
-                base_url="https://chat.ecnu.edu.cn/open/api/v1",
+            api_key=self.config.api_key,
+            base_url=self.config.base_url
         )
-                    
-        # Adjust parameters based on model version
-        max_tokens = self._get_max_tokens_for_model()
-        use_stream = self._should_use_stream_for_model()
+        
         if response_format is None:
-            api_params = {
-                "messages": messages,
-                "model": self.config.model_name,
-                "temperature": self.config.temperature,
-                "timeout": int(kwargs.get("timeout", 60)),
-                "top_p": self.config.top_p,
-                "frequency_penalty": self.config.frequency_penalty,
-                "presence_penalty": self.config.presence_penalty,
-                "seed": self.config.seed,
-                "max_tokens": max_tokens,
+            chat = client.chat.completions.create(
+                messages=messages,
+                model=self.config.model_name,
+                temperature=self.config.temperature,
+                timeout=int(kwargs.get("timeout", 30)),
+                top_p=self.config.top_p,
+                frequency_penalty=self.config.frequency_penalty,
+                presence_penalty=self.config.presence_penalty,
+                seed=self.config.seed,
+                max_tokens=self.config.max_completion_tokens,
                 **kwargs
-            }
-            
-            if use_stream:
-                api_params["stream"] = True
-                chat = client.chat.completions.create(**api_params)
-                # Collect all chunks from stream
-                content = ""
-                for chunk in chat:
-                    if chunk.choices[0].delta.content is not None:
-                        content += chunk.choices[0].delta.content
-                return content
-            else:
-                chat = client.chat.completions.create(**api_params)
-                return chat.choices[0].message.content
+            )
+            return chat.choices[0].message.content
 
         # For structured output, we need to use a different approach
         # since DashScope might not support response_format parameter
         try:
             # First try with response_format if supported
-            api_params = {
-                "messages": messages,
-                "model": self.config.model_name,
-                "temperature": self.config.temperature,
-                "timeout": int(kwargs.get("timeout", 60)),
-                "top_p": self.config.top_p,
-                "frequency_penalty": self.config.frequency_penalty,
-                "presence_penalty": self.config.presence_penalty,
-                "seed": self.config.seed,
-                "max_tokens": max_tokens,
-                "response_format": {"type": "json_object"},
+            chat = client.chat.completions.create(
+                messages=messages,
+                model=self.config.model_name,
+                temperature=self.config.temperature,
+                timeout=int(kwargs.get("timeout", 30)),
+                top_p=self.config.top_p,
+                frequency_penalty=self.config.frequency_penalty,
+                presence_penalty=self.config.presence_penalty,
+                seed=self.config.seed,
+                max_tokens=self.config.max_completion_tokens,
+                response_format={"type": "json_object"},
                 **kwargs
-            }
-            
-            if use_stream:
-                api_params["stream"] = True
-                chat = client.chat.completions.create(**api_params)
-                # Collect all chunks from stream
-                content = ""
-                for chunk in chat:
-                    if chunk.choices[0].delta.content is not None:
-                        content += chunk.choices[0].delta.content
-                return response_format.model_validate(from_json(content))
-            else:
-                chat = client.chat.completions.create(**api_params)
-                return response_format.model_validate(from_json(chat.choices[0].message.content))
+            )
+            return response_format.model_validate(from_json(chat.choices[0].message.content))
         except Exception:
             # Fallback: add JSON format instruction to the prompt
             schema = response_format.model_json_schema()
@@ -175,67 +148,24 @@ class QwenModel(BaseLLM):
             else:
                 messages.append({"role": "user", "content": json_instruction})
             
-            api_params = {
-                "messages": messages,
-                "model": self.config.model_name,
-                "temperature": self.config.temperature,
-                "timeout": int(kwargs.get("timeout", 60)),
-                "top_p": self.config.top_p,
-                "frequency_penalty": self.config.frequency_penalty,
-                "presence_penalty": self.config.presence_penalty,
-                "seed": self.config.seed,
-                "max_tokens": max_tokens,
+            chat = client.chat.completions.create(
+                messages=messages,
+                model=self.config.model_name,
+                temperature=self.config.temperature,
+                timeout=int(kwargs.get("timeout", 30)),
+                top_p=self.config.top_p,
+                frequency_penalty=self.config.frequency_penalty,
+                presence_penalty=self.config.presence_penalty,
+                seed=self.config.seed,
+                max_tokens=self.config.max_completion_tokens,
                 **kwargs
-            }
+            )
             
-            if use_stream:
-                api_params["stream"] = True
-                chat = client.chat.completions.create(**api_params)
-                # Collect all chunks from stream
-                content = ""
-                for chunk in chat:
-                    if chunk.choices[0].delta.content is not None:
-                        content += chunk.choices[0].delta.content
-                
-                try:
-                    return response_format.model_validate(from_json(content))
-                except Exception:
-                    self.logger.error("Failed to parse the output:\n%s", str(content))
-                    return None
-            else:
-                chat = client.chat.completions.create(**api_params)
-                try:
-                    return response_format.model_validate(from_json(chat.choices[0].message.content))
-                except Exception:
-                    self.logger.error("Failed to parse the output:\n%s", str(chat.choices[0].message.content))
-                    return None
-
-    def _get_max_tokens_for_model(self) -> int:
-        """Get the appropriate max_tokens value based on model version."""
-        model_name = self.config.model_name.lower()
-        
-        # Different model versions have different limits
-        if "qwen-max-0403" in model_name:
-            # This version has strict limits
-            return min(self.config.max_completion_tokens, 2000)
-        elif "qwen-max-latest" in model_name or "qwen-max-0428" in model_name:
-            # These versions might have different limits
-            return min(self.config.max_completion_tokens, 4000)
-        else:
-            # Default conservative limit
-            return min(self.config.max_completion_tokens, 2000)
-    
-    def _should_use_stream_for_model(self) -> bool:
-        """Determine if stream mode should be used based on model version."""
-        model_name = self.config.model_name.lower()
-        
-        # Some model versions require stream mode
-        if "qwen-max-0403" in model_name:
-            return True
-        elif "qwen-max-latest" in model_name or "qwen-max-0428" in model_name:
-            return False  # These might not require stream mode
-        else:
-            return True  # Default to stream mode for safety
+            try:
+                return response_format.model_validate(from_json(chat.choices[0].message.content))
+            except Exception:
+                self.logger.error("Failed to parse the output:\n%s", str(chat.choices[0].message.content))
+                return None
 
     def set_context(self, context: Context):
         """
