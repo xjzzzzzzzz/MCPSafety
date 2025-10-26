@@ -1,40 +1,134 @@
-# YFinance 测试指南
+# MCP-SafetyBench
+MCP-SafetyBench is a comprehensive benchmark designed to systematically evaluate the safety and robustness of LLM agents operating in the Model Context Protocol (MCP) ecosystem.
+It addresses critical gaps in existing MCP safety benchmarks by supporting real-world servers, multi-step reasoning, and diverse attack scenarios.
+![img](fig/example.png)
+## Key Features
 
-## ⚙️ 评测配置
+- **Real-world integration**: Built on real-world MCP servers, rather than simulated environments.  
+- **Systematic coverage**: Encompasses 20 attack types spanning the Server, Host, and User layers.  
+- **Multi-step tasks**: Includes complex reasoning workflows that require planning, tool selection, and context management.  
 
-**YAML 配置文件**: mcpuniverse/benchmark/configs/test/financial_analysis.yaml
+## Results
+![result1_domain](fig/result.png)
+![result_attacktype](fig/result2.png)
+## Getting Started
+### ⚠️ Security Recommendations
 
-在YAML配置文件中填入要评测的LLM 和 Agent
+🔒 **IMPORTANT SECURITY NOTICE**
 
-执行 python tests/benchmark/test_benchmark_financial_analysis.py进行评测
+Please read and follow these security guidelines carefully before running benchmarks:
 
-报告将保存到 log/ 文件夹下
+🚨 **GitHub Integration: CRITICAL** - We strongly recommend using a dedicated test GitHub account for benchmark evaluation. The AI agent will perform real operations on GitHub repositories, which could potentially modify or damage your personal repositories.
 
-# Web Search 测试指南
+🔐 **API Key Management:**
+- Store API keys securely and never commit them to version control
+- Use environment variables or secure key management systems
+- Regularly rotate your API keys for enhanced security
 
-在.env中填入SERP_API_KEY，OPENAI_API_KEY，CHROMA_DATA_DIR，其中OPENAI_API_KEY是利用评估gpt-4.1执行结果
+🛡️ **Access Permissions:**
+- Grant minimal necessary permissions for each service integration
+- Review and limit API key scopes to only required operations
+- Monitor API usage and set appropriate rate limits
 
-执行 python /home/zong/Documents/MCPSafety/tests/benchmark/test_benchmark_web_search.py 进行评测
+⚠️ **System Safety:** This benchmark contains various attack scenarios that may modify system files, create/delete repositories, and perform other potentially destructive operations. We strongly recommend running all tests in a Docker environment or isolated virtual machine to prevent unintended system modifications.
 
-## Docker 
-### build
+### Prerequisites
+
+* **Python**: Requires version 3.10 or higher.
+* **Docker**: Used for running Dockerized MCP servers.
+* **PostgreSQL** (optional): Used for database storage and persistence.
+* **Redis** (optional): Used for caching and memory management.
+
+1. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   pip install -r dev-requirements.txt
+   ```
+2. **Platform-specific requirements**
+
+   **Linux:**
+   ```bash
+   sudo apt-get install libpq-dev
+   ```
+
+   **macOS:**
+   ```bash
+   brew install postgresql
+   ```
+3. **Environment configuration**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and configuration
+   ```
+### API Keys and Configuration
+
+Configure the following environment variables in your `.env` file. The required keys depend on which benchmark domains you plan to evaluate:
+
+##### Core LLM Providers
+| Environment Variable | Provider | Description | Required For |
+|---------------------|----------|-------------|--------------|
+| `OPENAI_API_KEY` | OpenAI | API key for GPT models (gpt-5, etc.) | All domains |
+| `ANTHROPIC_API_KEY` | Anthropic | API key for Claude models | All domains |
+| `GEMINI_API_KEY` | Google | API key for Gemini models | All domains |
+
+> **Note**: You only need to configure the API key for the LLM provider you intend to use in your evaluation.
+
+### Domain-Specific Services
+
+| Environment Variable | Service | Description | Setup Instructions |
+|---------------------|---------|-------------|-------------------|
+| `SERP_API_KEY` | SerpAPI | Web search API for search benchmark evaluation | [Get API key](https://serpapi.com/) |
+| `SERPER_API_KEY` | Serper | Alternative web search API for Google search | [Get API key](https://serper.dev/) |
+| `GOOGLE_MAPS_API_KEY` | Google Maps | Geolocation and mapping services | [Setup Guide](https://console.cloud.google.com/google/maps-apis/credentials) |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub | Personal access token for repository operations | [Token Setup](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) |
+| `GITHUB_PERSONAL_ACCOUNT_NAME` | GitHub | Your GitHub username | N/A |
+| `CHROMA_API_KEY` | Chroma | API key for Chroma vector database cloud service | [Get API key](https://www.trychroma.com/) |
+| `FILESYSTEM_DIRECTORY` | Filesystem | Directory path for filesystem server operations | Set to desired working directory path |
+| `TERMINAL_WORKING_DIRECTORY` | Terminal | Working directory for terminal server command execution | Set to desired working directory path |
+
+### Execution
+#### Docker(Recommend)
+##### Build
 ``` shell
 docker build -t mcpsafety .
 ```
-
-### Run
-``` shell
+##### Run
+``` bash
+# Financial Analysis
 docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_financial_analysis.py"
-```
-``` shell
+
+# Web Search
 docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_web_search.py"
-```
-``` shell
+
+# Location Navigation
 docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_location_navigation.py"
-```
-``` shell
+
+# Browser Automation  
 docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_browser_automation.py"
-```
-``` shell
+
+# Repository Management
 docker run --rm -v $(pwd):/app -w /app mcpsafety bash -c "PYTHONPATH=. python tests/benchmark/test_benchmark_repository_management.py"
 ```
+
+#### Python
+
+Execute specific domain benchmarks using the following commands:
+
+```bash
+# Set Python path and run individual benchmarks
+export PYTHONPATH=.
+
+# Location Navigation
+python tests/benchmark/test_benchmark_location_navigation.py
+
+# Browser Automation  
+python tests/benchmark/test_benchmark_browser_automation.py
+
+# Financial Analysis
+python tests/benchmark/test_benchmark_financial_analysis.py
+
+# Repository Management
+python tests/benchmark/test_benchmark_repository_management.py
+
+# Web Search
+python tests/benchmark/test_benchmark_web_search.py
