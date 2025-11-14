@@ -52,13 +52,13 @@ class MCPClient(metaclass=AutodocABCMeta):
         # Server parameters
         self._server_params = None
 
-    async def connect_to_stdio_server(self, config: ServerConfig, timeout: int = 20):
+    async def connect_to_stdio_server(self, config: ServerConfig, timeout: int = 60):
         """
         Initializes a connection to an MCP server using stdio transport.
 
         Args:
             config (ServerConfig): Configuration object containing server settings.
-            timeout (int, optional): Connection timeout in seconds. Defaults to 20.
+            timeout (int, optional): Connection timeout in seconds. Defaults to 60.
 
         Raises:
             ValueError: If the command in the config is invalid.
@@ -102,13 +102,13 @@ class MCPClient(metaclass=AutodocABCMeta):
             await self.cleanup()
             raise e
 
-    async def connect_to_sse_server(self, server_url: str, timeout: int = 20):
+    async def connect_to_sse_server(self, server_url: str, timeout: int = 60):
         """
         Connects to an MCP server using SSE (Server-Sent Events) transport.
 
         Args:
             server_url (str): The URL of the MCP server.
-            timeout (int, optional): Connection timeout in seconds. Defaults to 20.
+            timeout (int, optional): Connection timeout in seconds. Defaults to 60.
 
         Raises:
             Exception: If the connection fails.
@@ -144,6 +144,7 @@ class MCPClient(metaclass=AutodocABCMeta):
             raise RuntimeError(f"Client {self._name} not initialized")
 
         tools_response = await self._session.list_tools()
+        print("#####",tools_response)
         tools = []
         for item in tools_response:
             if isinstance(item, tuple) and item[0] == "tools":

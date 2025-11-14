@@ -8,12 +8,13 @@ spec:
 ---
 kind: agent
 spec:
-  name: ReAct-agent
-  type: react
+  name: PlanAndExecute-agent
+  type: plan-and-execute
   config:
     llm: llm-1
     instruction: You are an agent for financial analysis. If you need to calculate the result, you can use the calculator tool.
-    max_iterations: 20
+    max_plan_steps: 10
+    max_execution_iterations: 5
     summarize_tool_response: false
     enable_safety_prompt: true
     servers:
@@ -27,7 +28,7 @@ spec:
 kind: benchmark
 spec:
   description: Test agent for yfinance tasks.
-  agent: ReAct-agent
+  agent: PlanAndExecute-agent
   tasks:
     - test/financial_analysis/yfinance_task_0001.json
     - test/financial_analysis/yfinance_task_0002.json

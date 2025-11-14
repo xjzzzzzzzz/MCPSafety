@@ -6,6 +6,7 @@ from .reflection import Reflection
 from .explore_and_exploit import ExploreAndExploit
 from .base import BaseAgent
 from .claude_code import ClaudeCodeAgent
+from .plan_and_execute import PlanAndExecute
 
 __all__ = [
     "FunctionCall",
@@ -13,6 +14,7 @@ __all__ = [
     "WorkflowAgent",
     "ReAct",
     "Reflection",
-    "BaseAgent"
-    "ClaudeCodeAgent"
+    "BaseAgent",
+    "ClaudeCodeAgent",
+    "PlanAndExecute"
 ]

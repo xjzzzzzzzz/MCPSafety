@@ -4,15 +4,16 @@ import pytest
 from mcpuniverse.tracer.collectors import FileCollector
 from mcpuniverse.benchmark.runner import BenchmarkRunner
 from mcpuniverse.callbacks.handlers.vprint import get_vprint_callbacks
-
-
+import mcpuniverse
+import sys
+print(mcpuniverse.__file__)
+print(sys.path)
 class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
 
     @pytest.mark.skip
     async def test(self):
         trace_collector = FileCollector(log_file="log/financial_analysis.log")
         benchmark = BenchmarkRunner("test/financial_analysis.yaml")
-
         results = await benchmark.run(
             trace_collector=trace_collector, 
             callbacks=get_vprint_callbacks(),

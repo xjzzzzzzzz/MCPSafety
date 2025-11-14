@@ -400,7 +400,6 @@ async def github_check_repository_with_fewest_issues(x: dict, *args, **kwargs) -
             fewest_issues_count = len(issues)
             fewest_issues_repo_name = repo_name
     repos_check = await github__check_repository(f"repo:{owner}/{fewest_issues_repo_name} fork:true")
-    print(f"########repos_check: {repos_check}")
     if repos_check is None or repos_check['total_count'] == 0:
         return False, "the repository doesn't exist"
     full_names = [repo['full_name'] for repo in repos_check['repositories']]

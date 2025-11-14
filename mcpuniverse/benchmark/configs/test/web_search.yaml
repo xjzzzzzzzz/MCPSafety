@@ -1,19 +1,20 @@
 kind: llm
 spec:
   name: llm-1
-  type: opanai
+  type: qwen
   config:
-    model_name: gpt-4o
+    model_name: ecnu-max
 
 ---
 kind: agent
 spec:
-  name: ReAct-agent
-  type: react
+  name: PlanAndExecute-agent
+  type: plan-and-execute
   config:
     llm: llm-1
     instruction: You are an agent for web searching. If you don't have enough information to answer the question, you can use the google-search tool. If you want to obtain the information with a specific URL, you can use the fetch tool.
-    max_iterations: 20
+    max_plan_steps: 10
+    max_execution_iterations: 5
     summarize_tool_response: false
     enable_safety_prompt: true
     servers:  
@@ -27,7 +28,7 @@ spec:
 kind: benchmark
 spec:
   description: Test agent for google search tasks.
-  agent: ReAct-agent
+  agent: PlanAndExecute-agent
   tasks:
     - test/web_search/info_search_task_0001.json
     - test/web_search/info_search_task_0002.json

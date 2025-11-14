@@ -179,7 +179,7 @@ class MCPManager(metaclass=AutodocABCMeta):
             self,
             server_name: str,
             transport: str = "stdio",
-            timeout: int = 30,
+            timeout: int = 60,
             mcp_gateway_address: str = ""
     ) -> MCPClient:
         """

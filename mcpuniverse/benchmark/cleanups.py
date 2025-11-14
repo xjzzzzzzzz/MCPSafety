@@ -65,7 +65,7 @@ async def github_delete_repository(repo: str, owner: str = "", **kwargs):
     }
     delay_time = 1
     for _ in range(int(kwargs.get("max_retries", 3))):
-        response = requests.delete(url, headers=headers, timeout=int(kwargs.get("timeout", 30)))
+        response = requests.delete(url, headers=headers, timeout=int(kwargs.get("timeout", 60)))
         if response.status_code == 204:
             return f"Repository {owner}/{repo} has been successfully deleted"
         if response.status_code == 403:
@@ -97,7 +97,7 @@ async def notion_delete_page(page: str, owner: str = "", **kwargs):
     data = '{"in_trash": true}'
     delay_time = 1
     for _ in range(int(kwargs.get("max_retries", 3))):
-        response = requests.patch(url, headers=headers, data=data, timeout=int(kwargs.get("timeout", 30)))
+        response = requests.patch(url, headers=headers, data=data, timeout=int(kwargs.get("timeout", 60)))
         if response.status_code == 200:
             return f"Page {page} has been successfully moved to trash"
         if response.status_code == 403:

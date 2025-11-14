@@ -22,7 +22,7 @@ async def weather__make_nws_request(url: str) -> dict[str, Any] | None:
     }
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(url, headers=headers, timeout=30.0)
+            response = await client.get(url, headers=headers, timeout=60.0)
             response.raise_for_status()
             return response.json()
         except Exception:

@@ -22,7 +22,7 @@ async def _search_serper(
         query: str,
         location: str = "",
         num_items: int = 20,
-        timeout: float = 30
+        timeout: float = 60
 ) -> List[Dict[str, Any]]:
     """
     Make a request to the Serper API.
@@ -75,7 +75,7 @@ async def _search_serpapi(
         location: str = "",
         engine: str = "google",
         num_items: int = 20,
-        timeout: float = 30
+        timeout: float = 60
 ) -> List[Dict[str, Any]]:
     """
     Make a request to the Serp API.

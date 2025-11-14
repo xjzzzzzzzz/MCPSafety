@@ -28,7 +28,7 @@ def build_server(port: int) -> FastMCP:
     
     # Get working directory from environment variable, fallback to default
     default_working_directory =  os.environ.get("TERMINAL_WORKING_DIRECTORY", os.path.expanduser("~/mcp/workspace"))
-    print(f"Default working directory: {default_working_directory}")
+    
     @mcp.tool()
     async def run_command(command: str) -> str:
         """
