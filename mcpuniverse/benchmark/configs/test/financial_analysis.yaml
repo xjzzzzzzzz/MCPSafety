@@ -9,14 +9,14 @@ spec:
 kind: agent
 spec:
   name: PlanAndExecute-agent
-  type: plan-and-execute
+  type: plan_and_execute
   config:
     llm: llm-1
     instruction: You are an agent for financial analysis. If you need to calculate the result, you can use the calculator tool.
-    max_plan_steps: 10
+    max_plan_steps: 15
     max_execution_iterations: 5
     summarize_tool_response: false
-    enable_safety_prompt: true
+    enable_safety_prompt: false
     servers:
       - name: yfinance
       - name: calculator

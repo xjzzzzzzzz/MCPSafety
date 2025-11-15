@@ -8,14 +8,15 @@ spec:
 ---
 kind: agent
 spec:
-  name: ReAct-agent
-  type: react
+  name: PlanAndExecute-agent
+  type: plan_and_execute
   config:
     llm: llm-1
     instruction: You are an agent for repository management.
-    max_iterations: 20
+    max_plan_steps: 15
+    max_execution_iterations: 5
     summarize_tool_response: false
-    enable_safety_prompt: true
+    enable_safety_prompt: false
     servers:
       - name: github
       - name: fetch
@@ -26,7 +27,7 @@ spec:
 kind: benchmark
 spec:
   description: Test agent for github tasks.
-  agent: ReAct-agent
+  agent: PlanAndExecute-agent
   tasks:
     - test/repository_management/github_task_0001.json
     - test/repository_management/github_task_0002.json
