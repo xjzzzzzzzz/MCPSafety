@@ -144,7 +144,6 @@ class MCPClient(metaclass=AutodocABCMeta):
             raise RuntimeError(f"Client {self._name} not initialized")
 
         tools_response = await self._session.list_tools()
-        print("#####",tools_response)
         tools = []
         for item in tools_response:
             if isinstance(item, tuple) and item[0] == "tools":

@@ -391,15 +391,23 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
             bool: True if server files were modified and reconnection is needed
         """
         try:
+            # Check if agent has tools
+            if not hasattr(agent, '_tools') or not agent._tools:
+                self._logger.warning("Agent has no tools available for server code modifications")
+                return False
             modifications = task.get_mcp_server_modifications()
             if not modifications:
                 return False
-            
+            # Check if we need to modify server code for return values
+            has_return_modifications = any(
+                modification.get("modification_return") 
+                for modification in modifications
+            )
             # Apply tool description modifications (keep existing logic)
             for modification in modifications:
                 tool_name = modification.get("tool_name")
                 modification_description = modification.get("modification_description")
-                
+                modification_return = modification.get("modification_return")
                 if tool_name and modification_description:
                     # Find the tool in the agent's tools and modify its description
                     for server_name, tools in agent._tools.items():
@@ -413,139 +421,133 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                                 tool.description = modification_description
                                 self._logger.info(f"Applied tool modifications to {server_name}.{tool_name}")
                                 break
-            
-            # Check if we need to modify server code for return values
-            has_return_modifications = any(
-                modification.get("modification_return") 
-                for modification in modifications
-            )
-            
-            if has_return_modifications:
-                # Get the first server directory from the agent's tools
-                if not hasattr(agent, '_tools') or not agent._tools:
-                    self._logger.warning("Agent has no tools available for server code modifications")
-                    return False
-                
-                first_server_name = list(agent._tools.keys())[0]
-                self._logger.info(f"Using first available server for server code modifications: {first_server_name}")
-                
-                # Get the server configuration from MCP manager
-                mcp_manager = getattr(agent, '_mcp_manager', None)
-                if not mcp_manager:
-                    self._logger.warning("Agent has no MCP manager for server code modifications")
-                    return
-                
-                # Find the server configuration
-                server_config = None
-                try:
-                    server_config = mcp_manager.get_config(first_server_name)
-                except Exception as e:
-                    self._logger.warning(f"Failed to get config for server {first_server_name}: {e}")
-                    return
-                
-                if not server_config:
-                    self._logger.warning(f"Server {first_server_name} not found in MCP manager")
-                    return
-                
-                # Get the server directory from the config
-                server_dir = None
-                if server_config.stdio.args:
-                    module_name = server_config.stdio.args[-1]  # Get the last argument (module name)
-                    if module_name.startswith("-m"):
-                        module_name = module_name[2:]  # Remove "-m" prefix
+                if tool_name and modification_return:
+                    # Find which server contains this tool
+                    target_server_name = None
+                    for server_name, tools in agent._tools.items():
+                        for tool in tools:
+                            if tool.name == tool_name:
+                                target_server_name = server_name
+                                self._logger.info(f"Found tool {tool_name} in server {target_server_name} for return modification")
+                                break
+                        if target_server_name:
+                            break
                     
-                    # Convert module name to directory path
-                    if module_name.startswith("mcpuniverse.mcp.servers."):
-                        # For internal servers, construct the path
-                        server_name_short = module_name.split(".")[-1]
-                        server_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                               "mcpuniverse", "mcp", "servers", server_name_short)
-                    else:
-                        # For external modules, try to find the module path
-                        try:
-                            import importlib.util
-                            spec = importlib.util.find_spec(module_name)
-                            if spec and spec.origin:
-                                server_dir = os.path.dirname(spec.origin)
-                            else:
-                                self._logger.warning(f"Cannot find module path for {module_name}")
-                                return
-                        except Exception as e:
-                            self._logger.warning(f"Failed to find module path for {module_name}: {e}")
-                            return
-                else:
-                    self._logger.warning(f"Unsupported server type for {first_server_name}")
-                    return
-                
-                if not server_dir or not os.path.exists(server_dir):
-                    self._logger.warning(f"Server directory {server_dir} does not exist for {first_server_name}")
-                    return
-                
-                # Helper function to find complete return statement
-                def find_return_end(content, return_pos):
-                    """Find the end of a complete return statement, handling multi-line returns."""
-                    paren_count = 0
-                    brace_count = 0
-                    bracket_count = 0
-                    in_string = False
-                    string_char = None
+                    if not target_server_name:
+                        self._logger.warning(f"Tool {tool_name} not found in any server for return modification")
+                        continue
                     
-                    pos = return_pos
-                    while pos < len(content):
-                        char = content[pos]
+                    # Get the server configuration from MCP manager
+                    mcp_manager = getattr(agent, '_mcp_manager', None)
+                    if not mcp_manager:
+                        self._logger.warning("Agent has no MCP manager for server code modifications")
+                        continue
+                    
+                    # Find the server configuration
+                    server_config = None
+                    try:
+                        server_config = mcp_manager.get_config(target_server_name)
+                    except Exception as e:
+                        self._logger.warning(f"Failed to get config for server {target_server_name}: {e}")
+                        continue
+                    
+                    if not server_config:
+                        self._logger.warning(f"Server {target_server_name} not found in MCP manager")
+                        continue
+                    
+                    # Get the server directory from the config
+                    server_dir = None
+                    if server_config.stdio.args:
+                        module_name = server_config.stdio.args[-1]  # Get the last argument (module name)
+                        if module_name.startswith("-m"):
+                            module_name = module_name[2:]  # Remove "-m" prefix
                         
-                        if not in_string:
-                            if char in '"\'':
-                                in_string = True
-                                string_char = char
-                            elif char == '(':
-                                paren_count += 1
-                            elif char == ')':
-                                paren_count -= 1
-                            elif char == '{':
-                                brace_count += 1
-                            elif char == '}':
-                                brace_count -= 1
-                            elif char == '[':
-                                bracket_count += 1
-                            elif char == ']':
-                                bracket_count -= 1
-                            elif char == '\n' and paren_count == 0 and brace_count == 0 and bracket_count == 0:
-                                # Found complete return statement end
-                                return pos
+                        # Convert module name to directory path
+                        if module_name.startswith("mcpuniverse.mcp.servers."):
+                            # For internal servers, construct the path
+                            server_name_short = module_name.split(".")[-1]
+                            server_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                                                "mcpuniverse", "mcp", "servers", server_name_short)
                         else:
-                            if char == string_char and (pos == 0 or content[pos-1] != '\\'):
-                                in_string = False
-                                string_char = None
-                        
-                        pos += 1
+                            # For external modules, try to find the module path
+                            try:
+                                import importlib.util
+                                spec = importlib.util.find_spec(module_name)
+                                if spec and spec.origin:
+                                    server_dir = os.path.dirname(spec.origin)
+                                else:
+                                    self._logger.warning(f"Cannot find module path for {module_name}")
+                                    continue
+                            except Exception as e:
+                                self._logger.warning(f"Failed to find module path for {module_name}: {e}")
+                                continue
+                    else:
+                        self._logger.warning(f"Unsupported server type for {target_server_name}")
+                        continue
                     
-                    return len(content)
+                    if not server_dir or not os.path.exists(server_dir):
+                        self._logger.warning(f"Server directory {server_dir} does not exist for {target_server_name}")
+                        continue
+                    
+                    # Helper function to find complete return statement
+                    def find_return_end(content, return_pos):
+                        """Find the end of a complete return statement, handling multi-line returns."""
+                        paren_count = 0
+                        brace_count = 0
+                        bracket_count = 0
+                        in_string = False
+                        string_char = None
+                        
+                        pos = return_pos
+                        while pos < len(content):
+                            char = content[pos]
+                            
+                            if not in_string:
+                                if char in '"\'':
+                                    in_string = True
+                                    string_char = char
+                                elif char == '(':
+                                    paren_count += 1
+                                elif char == ')':
+                                    paren_count -= 1
+                                elif char == '{':
+                                    brace_count += 1
+                                elif char == '}':
+                                    brace_count -= 1
+                                elif char == '[':
+                                    bracket_count += 1
+                                elif char == ']':
+                                    bracket_count -= 1
+                                elif char == '\n' and paren_count == 0 and brace_count == 0 and bracket_count == 0:
+                                    # Found complete return statement end
+                                    return pos
+                            else:
+                                if char == string_char and (pos == 0 or content[pos-1] != '\\'):
+                                    in_string = False
+                                    string_char = None
+                            
+                            pos += 1
+                        
+                        return len(content)
 
-                # Directly modify the server code to change tool return values
-                try:
-                    server_py_path = os.path.join(server_dir, "server.py")
-                    backup_path = os.path.join(server_dir, "server.py.backup")
-                    
-                    # Create backup of original server.py if not exists
-                    if not os.path.exists(backup_path):
-                        import shutil
-                        shutil.copy2(server_py_path, backup_path)
-                        self._logger.info(f"Created backup of {server_py_path}")
-                    
-                    # Read original server.py content
-                    with open(server_py_path, 'r', encoding='utf-8') as f:
-                        server_content = f.read()
-                    
-                    # Apply return value modifications for each tool
-                    modified_content = server_content
-                    for modification in modifications:
-                        tool_name = modification.get("tool_name")
-                        modification_return = modification.get("modification_return")
+                    # Directly modify the server code to change tool return values
+                    try:
+                        server_py_path = os.path.join(server_dir, "server.py")
+                        backup_path = os.path.join(server_dir, "server.py.backup")
                         
-                        if not tool_name or not modification_return:
-                            continue
+                        # Create backup of original server.py if not exists
+                        if not os.path.exists(backup_path):
+                            import shutil
+                            shutil.copy2(server_py_path, backup_path)
+                            self._logger.info(f"Created backup of {server_py_path}")
                         
+                        # Read original server.py content
+                        with open(server_py_path, 'r', encoding='utf-8') as f:
+                            server_content = f.read()
+                        
+                        # Apply return value modifications for each tool
+                        modified_content = server_content
+
                         # Find the tool function definition
                         tool_pattern = f"def {tool_name}("
                         tool_start = modified_content.find(tool_pattern)
@@ -618,41 +620,41 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                             self._logger.info(f"Replaced return statement {len(return_positions) - return_positions.index(return_pos)} in tool {tool_name}")
                         
                         self._logger.info(f"Replaced {len(return_positions)} return statements in tool {tool_name}")
-                    
-                    # Write modified server.py
-                    with open(server_py_path, 'w', encoding='utf-8') as f:
-                        f.write(modified_content)
-                    
-                    self._logger.info(f"Successfully modified tool return values in {server_py_path}")
-                    
-                    # Store backup path for restoration during cleanup
-                    if not hasattr(task, '_server_backup_path'):
-                        task._server_backup_path = backup_path
-                        task._original_server_path = server_py_path
-                    
-                    # Reconnect to the modified server using change_servers
-                    try:
-                        # Get current server configurations
-                        current_servers = []
-                        for server_name, tools in agent._tools.items():
-                            server_config = mcp_manager.get_config(server_name)
-                            server_info = {
-                                "name": server_name,
-                                "transport": "stdio"
-                            }
-                            current_servers.append(server_info)
                         
-                        # Reconnect using change_servers
-                        await agent.change_servers(current_servers)
-                        self._logger.info(f"Successfully reconnected to modified server using change_servers")
+                        # Write modified server.py
+                        with open(server_py_path, 'w', encoding='utf-8') as f:
+                            f.write(modified_content)
                         
-                    except Exception as client_error:
-                        self._logger.error(f"Failed to reconnect using change_servers: {client_error}")
+                        self._logger.info(f"Successfully modified tool return values in {server_py_path}")
+                        
+                        # Store backup path for restoration during cleanup
+                        if not hasattr(task, '_server_backup_path'):
+                            task._server_backup_path = backup_path
+                            task._original_server_path = server_py_path
+                        
+                        # Reconnect to the modified server using change_servers
+                        try:
+                            # Get current server configurations
+                            current_servers = []
+                            for server_name, tools in agent._tools.items():
+                                server_config = mcp_manager.get_config(server_name)
+                                server_info = {
+                                    "name": server_name,
+                                    "transport": "stdio"
+                                }
+                                current_servers.append(server_info)
+                            
+                            # Reconnect using change_servers
+                            await agent.change_servers(current_servers)
+                            self._logger.info(f"Successfully reconnected to modified server using change_servers")
+                            
+                        except Exception as client_error:
+                            self._logger.error(f"Failed to reconnect using change_servers: {client_error}")
+                        
+                    except Exception as e:
+                        self._logger.warning(f"Failed to modify tool return values directly: {e}")
+                        self._logger.info("Tool return value modification failed.")
                     
-                except Exception as e:
-                    self._logger.warning(f"Failed to modify tool return values directly: {e}")
-                    self._logger.info("Tool return value modification failed.")
-            
             # Return True if server files were modified
             return has_return_modifications
             

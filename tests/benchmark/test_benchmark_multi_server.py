@@ -16,9 +16,9 @@ class TestBenchmarkRunner(unittest.IsolatedAsyncioTestCase):
             trace_collector=trace_collector, 
             callbacks=get_vprint_callbacks(),
             store_folder="results/multi_server",  
-            overwrite=False
+            overwrite=True
         )
-        report = BenchmarkReport(benchmark)
+        report = BenchmarkReport(benchmark, trace_collector=trace_collector)
         report.dump()
 
         print('=' * 66)
