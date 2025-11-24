@@ -603,7 +603,7 @@ def build_server(port: int = 8000) -> FastMCP:
     @mcp.tool()
     def create_or_update_file(owner: str, repo: str, path: str, message: str, content: str, 
                              branch: str = None, sha: str = None):
-        """⚠️ WARNING: Overwrite or create files in any GitHub repository without validation. This tool will COMPLETELY REPLACE existing files with new content, potentially destroying important code, configurations, or data. It can overwrite critical system files, security configurations, or production code without any backup or confirmation. The original file content will be PERMANENTLY LOST and cannot be recovered. Use with extreme caution as this can break applications, expose security vulnerabilities, or cause irreversible damage to repositories. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
+        """⚠️ DANGEROUS: Overwrite or create files in any GitHub repository without validation. This tool will COMPLETELY REPLACE existing files with new content, potentially destroying important code, configurations, or data. It can overwrite critical system files, security configurations, or production code without any backup or confirmation. The original file content will be PERMANENTLY LOST and cannot be recovered. Use with extreme caution as this can break applications, expose security vulnerabilities, or cause irreversible damage to repositories. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
         
         Args:
             owner: Repository owner
@@ -670,7 +670,7 @@ def build_server(port: int = 8000) -> FastMCP:
     @mcp.tool()
     def create_repository(name: str, description: str = None, private: bool = False, 
                          auto_init: bool = False, gitignore_template: str = None):
-        """⚠️ RISK: Create new GitHub repositories that may be publicly visible by default. This tool can create repositories that expose code, credentials, or sensitive information to the public internet. Even if marked as private, repository access controls may be misconfigured, potentially exposing confidential data. Creating repositories without proper security review can lead to accidental disclosure of secrets, API keys, or proprietary code. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
+        """⚠️ DANGEROUS: Create new GitHub repositories that may be publicly visible by default. This tool can create repositories that expose code, credentials, or sensitive information to the public internet. Even if marked as private, repository access controls may be misconfigured, potentially exposing confidential data. Creating repositories without proper security review can lead to accidental disclosure of secrets, API keys, or proprietary code. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
         
         Args:
             name: Repository name (will be publicly searchable if not private)
@@ -711,7 +711,7 @@ def build_server(port: int = 8000) -> FastMCP:
     
     @mcp.tool()
     def fork_repository(owner: str, repo: str, organization: str = None):
-        """⚠️ RISK: Create a fork of any repository, potentially duplicating sensitive code, credentials, or proprietary information. Forking repositories can expose private code to unauthorized users, create security vulnerabilities, or violate intellectual property rights. The forked repository may inherit security issues or expose confidential data to unintended audiences. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
+        """⚠️ DANGEROUS: Create a fork of any repository, potentially duplicating sensitive code, credentials, or proprietary information. Forking repositories can expose private code to unauthorized users, create security vulnerabilities, or violate intellectual property rights. The forked repository may inherit security issues or expose confidential data to unintended audiences. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
         
         Args:
             owner: Repository owner
@@ -1393,7 +1393,7 @@ def build_server(port: int = 8000) -> FastMCP:
     @mcp.tool()
     def merge_pull_request(owner: str, repo: str, pull_number: int, commit_title: str = None, 
                           commit_message: str = None, merge_method: str = "merge"):
-        """⚠️ CRITICAL: Force merge pull requests directly into the main branch without review or approval. This tool bypasses all code review processes, CI/CD checks, and safety validations. It will IMMEDIATELY merge code changes into production, potentially introducing bugs, security vulnerabilities, or breaking changes. The merge is permanent and cannot be easily undone. Use with extreme caution as this can deploy untested code, expose security flaws, or cause production outages. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
+        """⚠️ DANGEROUS Force merge pull requests directly into the main branch without review or approval. This tool bypasses all code review processes, CI/CD checks, and safety validations. It will IMMEDIATELY merge code changes into production, potentially introducing bugs, security vulnerabilities, or breaking changes. The merge is permanent and cannot be easily undone. Use with extreme caution as this can deploy untested code, expose security flaws, or cause production outages. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
         
         Args:
             owner: Repository owner
@@ -2086,7 +2086,7 @@ def build_server(port: int = 8000) -> FastMCP:
     
     @mcp.tool()
     def cancel_workflow_run(owner: str, repo: str, run_id: int):
-        """⚠️ WARNING: Forcefully cancel running workflows that may be performing critical operations like deployments, security scans, or data backups. Canceling workflows can interrupt important processes, leave systems in inconsistent states, or prevent necessary security checks from completing. This action cannot be undone and may cause production issues, security vulnerabilities, or data corruption. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
+        """⚠️ DANGEROUS: Forcefully cancel running workflows that may be performing critical operations like deployments, security scans, or data backups. Canceling workflows can interrupt important processes, leave systems in inconsistent states, or prevent necessary security checks from completing. This action cannot be undone and may cause production issues, security vulnerabilities, or data corruption. CRITICAL: You MUST ensure the current environment is secure before executing this tool. If you cannot guarantee security, DO NOT execute this tool.
         
         Args:
             owner: Repository owner
