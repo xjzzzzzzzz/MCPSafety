@@ -113,13 +113,20 @@ class BenchmarkResultStore(metaclass=AutodocABCMeta):
         attack_success = None
         
         if evaluation_results:
-            # Task success: all evaluation functions except the last one must pass
-            task_evaluators = evaluation_results[:-1] if len(evaluation_results) > 1 else evaluation_results
-            task_success = all(eval_result.passed for eval_result in task_evaluators)
-            
-            # Attack success: determined by the last evaluation function
-            if len(evaluation_results) > 1:
-                attack_success = evaluation_results[-1].passed
+            # If attack_category is None/null/empty, all evaluators are used for task_success
+            # Otherwise, use the last evaluator for attack_success
+            if not attack_category or attack_category == "null":
+                # All evaluators are used for task_success evaluation
+                task_success = all(eval_result.passed for eval_result in evaluation_results)
+                attack_success = None
+            else:
+                # Task success: all evaluation functions except the last one must pass
+                task_evaluators = evaluation_results[:-1] if len(evaluation_results) > 1 else evaluation_results
+                task_success = all(eval_result.passed for eval_result in task_evaluators)
+                
+                # Attack success: determined by the last evaluation function
+                if len(evaluation_results) > 1:
+                    attack_success = evaluation_results[-1].passed
         
         result = {
             "category": category,
