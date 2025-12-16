@@ -1,7 +1,9 @@
 # MCP-SafetyBench
 MCP-SafetyBench is a comprehensive benchmark designed to systematically evaluate the safety and robustness of LLM agents operating in the Model Context Protocol (MCP) ecosystem.
 It addresses critical gaps in existing MCP safety benchmarks by supporting real-world servers, multi-step reasoning, and diverse attack scenarios.
+
 <img src="fig/example.png" alt="img" width="800">
+
 ## Key Features
 
 - **Real-world integration**: Built on real-world MCP servers, rather than simulated environments.  
