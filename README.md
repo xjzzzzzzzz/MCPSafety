@@ -11,7 +11,9 @@ It addresses critical gaps in existing MCP safety benchmarks by supporting real-
 ## Results
 <img src="fig/result.png" alt="result1_domain" width="800">
 <img src="fig/result2.png" alt="result_attacktype" width="800">
+
 ## Getting Started
+
 ### ⚠️ Security Recommendations
 
 🔒 **IMPORTANT SECURITY NOTICE**
