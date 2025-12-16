@@ -46,7 +46,6 @@ class QwenConfig(BaseConfig):
     presence_penalty: float = 0.0
     max_completion_tokens: int = 2048
     seed: int = 12345
-    base_url: str = "https://chat.ecnu.edu.cn/open/api/v1"
 
 
 class QwenModel(BaseLLM):
@@ -63,7 +62,6 @@ class QwenModel(BaseLLM):
     config_class = QwenConfig
     alias = "qwen"
     env_vars = ["QWEN_API_KEY"]
-    print("**********************")
     def __init__(self, config: Optional[Union[Dict, str]] = None):
         """
         Initializes the QwenModel instance.
@@ -100,8 +98,8 @@ class QwenModel(BaseLLM):
                 response_format is provided, or None if parsing structured output fails.
         """
         client = OpenAI(
-                api_key='sk-79fe944fbe8e40fb8a407c75636b7c29',  
-                base_url="https://chat.ecnu.edu.cn/open/api/v1",
+            api_key=self.config.api_key,
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         )
                     
         # Adjust parameters based on model version

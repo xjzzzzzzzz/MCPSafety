@@ -182,6 +182,7 @@ notebook/
 
 # debug logs
 log/
+results/
 
 # run script
 run*.sh
@@ -194,7 +195,5 @@ gpt_o3_results/
 gpt_oss_results/
 mcpuniverse/llm/gpt_oss_llm.py
 tests/gpt-oss/
-mcpuniverse/evaluator/blender/check_functions/evaluated_results/
-mcpuniverse/evaluator/blender/blend_files/
 tests/cursor/
 tests/benchmark/*_run_many_llms.py

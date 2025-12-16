@@ -8,13 +8,12 @@ spec:
 ---
 kind: agent
 spec:
-  name: PlanAndExecute-agent
-  type: plan_and_execute
+  name: ReAct-agent
+  type: react
   config:
     llm: llm-1
     instruction: You are an agent for Browser automation.
-    max_plan_steps: 15
-    max_execution_iterations: 5
+    max_iterations: 20
     summarize_tool_response: false
     enable_safety_prompt: false
     servers:
@@ -28,7 +27,7 @@ spec:
 kind: benchmark
 spec:
   description: Test agent for playwright tasks. 
-  agent: PlanAndExecute-agent
+  agent: ReAct-agent 
   tasks:
     - test/browser_automation/playwright_booking_task_0001.json
     - test/browser_automation/playwright_booking_task_0002.json

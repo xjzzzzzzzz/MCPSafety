@@ -36,26 +36,14 @@ Please read and follow these security guidelines carefully before running benchm
 
 * **Python**: Requires version 3.10 or higher.
 * **Docker**: Used for running Dockerized MCP servers.
-* **PostgreSQL** (optional): Used for database storage and persistence.
-* **Redis** (optional): Used for caching and memory management.
 
 1. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    pip install -r dev-requirements.txt
    ```
-2. **Platform-specific requirements**
 
-   **Linux:**
-   ```bash
-   sudo apt-get install libpq-dev
-   ```
-
-   **macOS:**
-   ```bash
-   brew install postgresql
-   ```
-3. **Environment configuration**
+2. **Environment configuration**
    ```bash
    cp .env.example .env
    # Edit .env with your API keys and configuration

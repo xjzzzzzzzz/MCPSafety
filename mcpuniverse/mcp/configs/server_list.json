@@ -244,15 +244,6 @@
       ]
     }
   },
-  "blender": {
-    "stdio": {
-      "command": "python",
-      "args": [
-        "-m",
-        "mcpuniverse.mcp.servers.blender"
-      ]
-    }
-  },
   "notion": {
     "stdio": {
       "command": "npx",
