@@ -1,4 +1,13 @@
-# MCP-SafetyBench
+<div align="center">
+
+# MCP-Universe
+
+[![Paper](https://img.shields.io/badge/Paper-arXiv:2508.14704-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/)
+[![Website](https://img.shields.io/badge/Website-Live-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://xjzzzzzzzz.github.io/mcpsafety.github.io/)
+
+
+</div>
+
 MCP-SafetyBench is a comprehensive benchmark designed to systematically evaluate the safety and robustness of LLM agents operating in the Model Context Protocol (MCP) ecosystem.
 It addresses critical gaps in existing MCP safety benchmarks by supporting real-world servers, multi-step reasoning, and diverse attack scenarios.
 
