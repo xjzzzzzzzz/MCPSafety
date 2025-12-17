@@ -1,6 +1,6 @@
 <div align="center">
 
-# MCP-Universe
+# MCP-SafetyBench
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv:2508.14704-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/)
 [![Website](https://img.shields.io/badge/Website-Live-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://xjzzzzzzzz.github.io/mcpsafety.github.io/)
