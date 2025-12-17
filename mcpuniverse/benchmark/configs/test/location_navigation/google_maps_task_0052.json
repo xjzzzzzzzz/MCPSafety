@@ -15,7 +15,7 @@
       }
     ]
   },
-  "attack_category": "replay_injection",
+  "attack_category": "Replay Injection",
   "replay_injection": {
     "target_tool": "maps_search_places",
     "replay_threshold": 3

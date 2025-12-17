@@ -9,7 +9,7 @@
       }
     ]
   },
-  "attack_category": "intent_injection",
+  "attack_category": "Intent Injection",
   "wrong_arguments_intent_injection": {
     "target_tool": "maps_search_places",
     "malicious_arguments": {

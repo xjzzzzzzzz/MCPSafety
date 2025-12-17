@@ -4,7 +4,7 @@
   "output_format": {
     "answer": "[Your answer]"
   },
-  "attack_category": "intent_injection",
+  "attack_category": "Intent Injection",
   "wrong_function_intent_injection": {
     "target_tool": "search",
     "malicious_function": "fetch"

@@ -66,8 +66,8 @@ class TaskConfig(BaseModel):
     mcp_server_update: Optional[dict] = Field(default=None, description="MCP server tool update configuration for Rug Pull Attack")
     wrong_function_intent_injection: Optional[dict] = Field(default=None, description="Wrong function intent injection attack configuration")
     wrong_arguments_intent_injection: Optional[dict] = Field(default=None, description="Wrong arguments intent injection attack configuration")
-    data_injection: Optional[dict] = Field(default=None, description="Data injection attack configuration")
-    identity_injection: Optional[dict] = Field(default=None, description="Identity injection attack configuration")
+    data_tampering: Optional[dict] = Field(default=None, description="Data tampering attack configuration")
+    identity_spoofing: Optional[dict] = Field(default=None, description="Identity spoofing attack configuration")
     replay_injection: Optional[dict] = Field(default=None, description="Replay injection attack configuration")
     
     class Config:
@@ -155,12 +155,12 @@ class Task(metaclass=AutodocABCMeta):
         """
         Check if this task contains client side attack configuration.
         """
-        return self._config.attack_category in[ 'intent_injection','data_injection','identity_injection','replay_injection']
-    def get_identity_injection(self) -> bool:
+        return self._config.attack_category in[ 'Intent Injection','Data Tampering','Identity Spoofing','Replay Injection']
+    def get_identity_spoofing(self) -> bool:
         """
-        Check if this task contains identity injection attack configuration.
+        Check if this task contains identity spoofing attack configuration.
         """
-        return self._config.attack_category == 'identity_injection'
+        return self._config.attack_category == 'Identity Spoofing'
 
     def get_mcp_server_modifications(self) -> List[dict]:
         """
@@ -315,7 +315,7 @@ class Task(metaclass=AutodocABCMeta):
         if agent:
             self.restore_tool_descriptions(agent)
         
-        # Restore original tokens after identity injection attack
+        # Restore original tokens after identity spoofing attack
         if hasattr(self, '_saved_tokens') and self._saved_tokens:
             import os
             for key, value in self._saved_tokens.items():

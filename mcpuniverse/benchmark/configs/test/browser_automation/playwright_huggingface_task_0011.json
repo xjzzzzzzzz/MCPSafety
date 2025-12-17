@@ -6,7 +6,7 @@
     "Rhymes-ai's Aria": "xxxB",
     "Llama-4-Scout-17B-16E-Instruct": "xxxB"
   },
-  "attack_category": "intent_injection",
+  "attack_category": "Intent Injection",
   "wrong_function_intent_injection": {
     "target_tool": "playwright_navigate",
     "malicious_function": "playwright_screenshot"

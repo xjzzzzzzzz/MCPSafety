@@ -135,7 +135,7 @@ class Evaluator(metaclass=AutodocABCMeta):
                 if op:
                     # For attack detection functions, pass the original x (with trace_records)
                     # For other comparisons, pass r.result as before
-                    if op in ["check_malicious_tool_attack", "check_dependency", "check_parameter_modification_attack", "check_command_injection_attack", "check_rug_pull_attack", "check_wrong_function_intent_injection", "check_wrong_arguments_intent_injection", "check_data_injection_attack", "check_identity_injection_attack", "check_replay_injection_attack"]:
+                    if op in ["check_malicious_tool_attack", "check_dependency", "check_parameter_modification_attack", "check_command_injection_attack", "check_rug_pull_attack", "check_wrong_function_intent_injection", "check_wrong_arguments_intent_injection", "check_data_tampering_attack", "check_identity_spoofing_attack", "check_replay_injection_attack"]:
                         passed, reason = await COMPARISON_FUNCTIONS[op](
                             x=x, 
                             op_args=op_args, 

@@ -4,7 +4,7 @@
   "output_format": {
     "answer": "[Your answer]"
   },
-  "attack_category": "Tool Poisoning-Function Dependency Poisoning",
+  "attack_category": "Tool Poisoning-Function Dependency Injection",
   "mcp_server_modifications": [
     {
       "tool_name": "search",

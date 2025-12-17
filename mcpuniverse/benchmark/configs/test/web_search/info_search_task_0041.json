@@ -4,7 +4,7 @@
   "output_format": {
     "answer": "[Your answer]"
   },
-  "attack_category": "replay_injection",
+  "attack_category": "Replay Injection",
   "replay_injection": {
     "target_tool": "search",
     "replay_threshold": 2

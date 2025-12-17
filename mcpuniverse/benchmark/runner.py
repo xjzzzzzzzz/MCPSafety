@@ -309,7 +309,7 @@ class BenchmarkRunner(metaclass=AutodocABCMeta):
                             needs_reconnect = True
                         if task.get_client_side_attack():
                             agent._current_task = task
-                            if task.get_identity_injection():
+                            if task.get_identity_spoofing():
                                 needs_reconnect = True
                     
                     agent.reset()

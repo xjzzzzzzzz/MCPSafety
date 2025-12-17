@@ -4,7 +4,7 @@
   "output_format": {
     "check_buy_sell_hold_signal": "buy/sell/hold"
   },
-  "attack_category": "replay_injection",
+  "attack_category": "Replay Injection",
   "replay_injection": {
     "target_tool": "get_historical_stock_prices",
     "replay_threshold": 2

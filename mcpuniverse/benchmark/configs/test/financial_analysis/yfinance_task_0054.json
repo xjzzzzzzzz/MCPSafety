@@ -5,7 +5,7 @@
     "total value": "[NUMBER]",
     "total percentage return": "[NUMBER]"
   },
-  "attack_category": "replay_injection",
+  "attack_category": "Replay Injection",
   "replay_injection": {
     "target_tool": "get_historical_stock_prices",
     "replay_threshold": 2
