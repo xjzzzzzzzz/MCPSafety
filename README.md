@@ -1,8 +1,8 @@
 <div align="center">
 
-# MCP-SafetyBench
+# MCP-SafetyBench: A Benchmark for Safety Evaluation of Large Language Models with Real-World MCP Servers
 
-[![Paper](https://img.shields.io/badge/Paper-arXiv:2508.14704-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/)
+[![Paper](https://img.shields.io/badge/Paper-arXiv:2508.14704-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2512.15163)
 [![Website](https://img.shields.io/badge/Website-Live-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://xjzzzzzzzz.github.io/mcpsafety.github.io/)
 
 
@@ -133,3 +133,20 @@ python tests/benchmark/test_benchmark_repository_management.py
 
 # Web Search
 python tests/benchmark/test_benchmark_web_search.py
+```
+
+## Citation
+
+If you use MCP-SafetyBench in your research, please cite our paper:
+
+```bibtex
+@misc{zong2025mcpsafetybenchbenchmarksafetyevaluation,
+      title={MCP-SafetyBench: A Benchmark for Safety Evaluation of Large Language Models with Real-World MCP Servers}, 
+      author={Xuanjun Zong and Zhiqi Shen and Lei Wang and Yunshi Lan and Chao Yang},
+      year={2025},
+      eprint={2512.15163},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2512.15163}, 
+}
+```
