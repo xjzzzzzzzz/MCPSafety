@@ -1,8 +1,10 @@
+
+
 <div align="center">
 
 # MCP-SafetyBench: A Benchmark for Safety Evaluation of Large Language Models with Real-World MCP Servers
 
-[![Paper](https://img.shields.io/badge/Paper-arXiv:2508.14704-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2512.15163)
+[![Paper](https://img.shields.io/badge/Paper-arXiv:2512.15163-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2512.15163)
 [![Website](https://img.shields.io/badge/Website-Live-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://xjzzzzzzzz.github.io/mcpsafety.github.io/)
 
 
@@ -78,7 +80,7 @@ Configure the following environment variables in your `.env` file. The required 
 
 | Environment Variable | Service | Description | Setup Instructions |
 |---------------------|---------|-------------|-------------------|
-| `SERP_API_KEY` | SerpAPI | Web search API for search benchmark evaluation | [Get API key](https://serpapi.com/) |
+| `SERP_API_KEY` | SerpApi | Web search API for search benchmark evaluation | [Get API key](https://serpapi.com/) |
 | `SERPER_API_KEY` | Serper | Alternative web search API for Google search | [Get API key](https://serper.dev/) |
 | `GOOGLE_MAPS_API_KEY` | Google Maps | Geolocation and mapping services | [Setup Guide](https://console.cloud.google.com/google/maps-apis/credentials) |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub | Personal access token for repository operations | [Token Setup](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) |
